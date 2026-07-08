@@ -434,6 +434,9 @@ body.hide-corners .tile .corner { display: none; }
 
 .tile.clickable { cursor: pointer; transition: transform 0.08s; }
 .tile.clickable:hover { transform: translateY(-6px); }
+/* a11y: visible keyboard focus ring on discardable tiles */
+.tile:focus { outline: none; }
+.tile.clickable:focus-visible { outline: 3px solid var(--yarn); outline-offset: 2px; transform: translateY(-6px); }
 .tile.selected { transform: translateY(-10px); border-color: var(--accent); box-shadow: 0 4px 10px rgba(201, 107, 61, 0.5); }
 .tile.selected:hover { transform: translateY(-10px); }
 .tile.suggest { box-shadow: 0 0 0 3px #ffd65a, 0 0 14px 4px rgba(255, 214, 90, 0.8); }
@@ -571,6 +574,32 @@ body.paws-collapsed #log { margin-right: 66px; }
 .quiz-right { color: var(--good); font-weight: 600; }
 .quiz-wrong { color: var(--bad); font-weight: 600; }
 .fan-list li { margin-bottom: 4px; }
+
+/* ---------- M7.6 · winning-path visualization (win modal) ----------
+   The completed hand is shown grouped into its four sets + the pair, each in
+   its own labelled cluster, so a player sees *why* the hand wins. */
+.win-groups { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+.win-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 7px 4px;
+  background: #f4ead6;
+  border: 1.5px solid #e6d6b6;
+  border-radius: 10px;
+}
+.win-group-tiles { display: flex; gap: 3px; }
+.win-group-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #9b7c3c;
+}
+/* the pair (the last group) reads as the "eyes" — tint it distinctly */
+.win-group:last-child { background: #eef3e6; border-color: #cfe0bf; }
+.win-group:last-child .win-group-label { color: var(--good); }
 
 /* ---------- Party mode ---------- */
 .party-input {
@@ -1129,4 +1158,18 @@ body.fx-full.fx-motion #hand .tile.clickable:hover {
   body.fx-depth #table { transform: none; }
   body.fx-depth #wall-row { display: none; }
   body.fx-depth .opp-hand .tile.back.mini { transform: none; }
+}
+
+/* M7.5 · phones: shrink the hand tiles + gaps so the board and your hand
+   share the screen instead of forcing a long scroll between them. Only the
+   large hand tiles change; small/mini (opponents, river) keep their sizes. */
+@media (max-width: 560px) {
+  #layout { padding: 8px 10px 12px; gap: 8px; }
+  .tile { width: 44px; height: 62px; border-bottom-width: 4px; }
+  .tile .corner { font-size: 9px; }
+  #hand { gap: 12px 3px; padding-top: 15px; margin-top: 0; }
+  #center { min-height: 220px; padding: 10px; }
+  #player-panel { margin-top: 10px; }
+  body.fx-depth #player-panel { margin-top: 12px; }
+  #log, body.paws-collapsed #log { height: 72px; }
 }

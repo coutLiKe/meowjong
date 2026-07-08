@@ -997,16 +997,27 @@ window.addEventListener("DOMContentLoaded", () => {
     G.autoCoach = e.target.checked;
     coachSay(G.autoCoach ? "I'm back! I'll comment as you play. 🐾" : "Going quiet — the Hint button still works if you need me. 🤫");
   });
-  // M6: Professor Paws floats bottom-right and collapses to a chat-bubble tab
+  // M6/M7.5: Professor Paws floats bottom-right and collapses to a chat-bubble
+  // tab. On phones the expanded card covers the hand + action dock, so it
+  // starts collapsed on narrow screens (unless the player set a preference),
+  // and the collapse state persists across sessions.
   const coachCollapse = $("#coach-collapse");
-  if (coachCollapse) coachCollapse.addEventListener("click", () => {
-    const collapsed = $("#coach").classList.toggle("collapsed");
-    document.body.classList.toggle("paws-collapsed", collapsed);
-    coachCollapse.textContent = collapsed ? "🐱" : "—";
-    const label = collapsed ? "Open Professor Paws" : "Collapse Professor Paws";
-    coachCollapse.title = label;
-    coachCollapse.setAttribute("aria-label", label);
-  });
+  if (coachCollapse) {
+    const pref = (typeof storeGet === "function") ? storeGet("meowjong-paws-collapsed") : null;
+    const startCollapsed = pref === "1" || (pref === null && window.innerWidth <= 900);
+    setCoachCollapsed(startCollapsed);
+    coachCollapse.addEventListener("click", () => {
+      setCoachCollapsed(!$("#coach").classList.contains("collapsed"), true);
+    });
+    // shrinking to a narrow width auto-collapses (once) so Paws never buries
+    // the hand; it never auto-expands, so it won't fight a deliberate open
+    let wasNarrow = window.innerWidth <= 900;
+    window.addEventListener("resize", () => {
+      const narrow = window.innerWidth <= 900;
+      if (narrow && !wasNarrow && !$("#coach").classList.contains("collapsed")) setCoachCollapsed(true);
+      wasNarrow = narrow;
+    });
+  }
   $("#modal-overlay").addEventListener("click", e => { if (e.target.id === "modal-overlay") hideModal(); });
 
   // main menu buttons

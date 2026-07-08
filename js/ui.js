@@ -27,10 +27,12 @@ function tileEl(kind, opts = {}) {
     d.className = "tile back" + (opts.small ? " small" : "") + (opts.mini ? " mini" : "");
     d.textContent = "🀄";
     d.title = "A face-down tile — hidden from you";
+    d.setAttribute("aria-label", "face-down tile");
     return d;
   }
   let cls = "tile";
-  if (typeof G !== "undefined" && G.wildKind !== null && G.wildKind !== undefined && kind === G.wildKind) cls += " gold";
+  const isGold = typeof G !== "undefined" && G.wildKind !== null && G.wildKind !== undefined && kind === G.wildKind;
+  if (isGold) cls += " gold";
   if (opts.small) cls += " small";
   if (opts.mini) cls += " mini";
   if (opts.selected) cls += " selected";
@@ -39,6 +41,8 @@ function tileEl(kind, opts = {}) {
   d.className = cls;
   d.innerHTML = `<span class="corner">${cornerText(kind)}</span>` + tileFace(kind);
   d.title = tileName(kind);
+  // a11y: every tile carries a spoken label (screen readers read this, not the SVG)
+  d.setAttribute("aria-label", tileName(kind) + (isGold ? " (gold / wild)" : ""));
   d.dataset.kind = kind;
   return d;
 }
@@ -223,14 +227,21 @@ function renderHand() {
   const canClick = G.awaitingDiscard;
   const suggestKind = G.suggestKind;
 
-  // one-time click delegation (replaces per-node listeners, survives reconciliation)
+  // one-time click + keyboard delegation (survives reconciliation).
+  // a11y: Enter/Space on a focused clickable tile acts like a click, so the
+  // hand is fully playable from the keyboard.
   if (!handRow._delegated) {
     handRow._delegated = true;
-    handRow.addEventListener("click", e => {
-      const t = e.target.closest ? e.target.closest(".tile") : null;
+    const activate = t => {
       if (!t || !handRow.contains(t) || !t.classList.contains("clickable")) return;
       const idx = Array.prototype.indexOf.call(handRow.children, t);
       onHandTileClick(idx, Number(t.dataset.kind));
+    };
+    handRow.addEventListener("click", e => activate(e.target.closest ? e.target.closest(".tile") : null));
+    handRow.addEventListener("keydown", e => {
+      if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") return;
+      const t = e.target.closest ? e.target.closest(".tile") : null;
+      if (t && t.classList.contains("clickable")) { e.preventDefault(); activate(t); }
     });
   }
 
@@ -273,6 +284,16 @@ function renderHand() {
     el.classList.toggle("selected", G.selectedIdx === idx);
     el.classList.toggle("suggest", suggestKind !== null && d.kind === suggestKind);
     el.classList.toggle("gold", G.wildKind !== null && G.wildKind !== undefined && d.kind === G.wildKind);
+    // a11y: only discardable tiles are focusable buttons; others are inert
+    if (canClick) {
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-pressed", G.selectedIdx === idx ? "true" : "false");
+    } else {
+      el.removeAttribute("role");
+      el.removeAttribute("tabindex");
+      el.removeAttribute("aria-pressed");
+    }
   });
   // anything after the tiles that isn't ours (defensive)
   while (handRow.children.length > nodes.length) handRow.lastChild.remove();
@@ -316,6 +337,23 @@ function setPrompt(text) { $("#prompt").innerHTML = text || ""; }
 function coachSay(html, mood = "🐱") {
   $("#coach-face").textContent = mood;
   $("#coach-msg").innerHTML = html;
+}
+
+/* Collapse/expand Professor Paws' card. `persist` records the choice so it
+   survives reloads; the auto-collapse-on-mobile path calls it without. */
+function setCoachCollapsed(collapsed, persist) {
+  const coach = $("#coach");
+  if (!coach) return;
+  coach.classList.toggle("collapsed", collapsed);
+  document.body.classList.toggle("paws-collapsed", collapsed);
+  const btn = $("#coach-collapse");
+  if (btn) {
+    btn.textContent = collapsed ? "🐱" : "—";
+    const label = collapsed ? "Open Professor Paws" : "Collapse Professor Paws";
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+  }
+  if (persist && typeof storeSet === "function") storeSet("meowjong-paws-collapsed", collapsed ? "1" : "0");
 }
 
 /* ---------- Log ---------- */
@@ -375,7 +413,8 @@ function endModalHtml(d) {
     ? "<h2>🎉 Hú! 胡 — You win!</h2>"
     : `<h2>${esc(d.winnerEmoji || "")} ${esc(d.winnerName || "")} wins this hand</h2>`;
   let body = `<p>${esc(d.winnerName || "")} won ${endHowText(d)}</p>`;
-  body += `<p><b>The winning hand</b> (gold = ${tileShort(_kindClamp(d.wild))} 🥇):</p>` + tilesHTML(handKinds);
+  body += `<p><b>The winning hand</b> — grouped into its sets + pair (gold = ${tileShort(_kindClamp(d.wild))} 🥇):</p>` +
+    winGroupsHTML(handKinds, _kindClamp(d.wild), melds.length);
   if (melds.length) {
     body += `<p><b>Claimed sets:</b></p><div class="tile-row">`;
     for (const m of melds) body += meldEl(m).outerHTML;
@@ -387,6 +426,102 @@ function endModalHtml(d) {
   const from = d.everyonePays ? "(everyone pays)" : `— mostly from ${esc(d.discarderName || "")}, who discarded the winning tile`;
   body += `</ul><p><b>Total: ${d.total | 0} points</b> → ${esc(d.winnerName || "")} collects <b>${d.winnerPayout | 0}</b> ${from}.</p>`;
   return h2 + body;
+}
+
+/* ---------- Winning-path visualization (presentation only) ----------
+   Reconstructs which tiles form each set + the pair, mirroring the engine's
+   proven recursion (canFormSetsW / runRec), so a winner can SEE *why* the hand
+   wins. Returns { pair:[k,k], sets:[[k,k,k],...] } or null when the shape can't
+   be partitioned (e.g. an instant three-gold win) — the caller then falls back
+   to a flat row. Never touches game state; used only for the win modal. */
+function decomposeWin(handKinds, wildKind, setsNeeded) {
+  const counts = countsOf(handKinds);
+  const wpool = (wildKind >= 0 && wildKind < 34) ? counts[wildKind] : 0;
+  if (wildKind >= 0 && wildKind < 34) counts[wildKind] = 0;
+  for (let p = 0; p < 34; p++) {            // the pair must be natural tiles
+    if (counts[p] >= 2) {
+      counts[p] -= 2;
+      const sets = _buildSets(counts, setsNeeded, wpool, wildKind);
+      counts[p] += 2;
+      if (sets) return { pair: [p, p], sets };
+    }
+  }
+  return null;
+}
+
+function _buildSets(c, n, w, wild) {
+  let k = 0; while (k < 34 && c[k] === 0) k++;
+  if (k === 34) {                            // only wilds left → pure-wild triplets
+    if (w !== 3 * n) return null;
+    const out = []; for (let i = 0; i < n; i++) out.push([wild, wild, wild]); return out;
+  }
+  if (n === 0) return null;
+  for (let a = Math.min(3, c[k]); a >= 1; a--) {   // triplet: a naturals + (3-a) wilds
+    if (w < 3 - a) continue;
+    c[k] -= a;
+    const rest = _buildSets(c, n - 1, w - (3 - a), wild);
+    c[k] += a;
+    if (rest) {
+      const set = [];
+      for (let i = 0; i < a; i++) set.push(k);
+      for (let i = 0; i < 3 - a; i++) set.push(wild);
+      return [set, ...rest];
+    }
+  }
+  if (k < 27) {                               // run containing k (smallest natural)
+    const base = Math.floor(k / 9) * 9, r = k - base;
+    for (let s = Math.max(0, r - 2); s <= Math.min(6, r); s++) {
+      const res = _buildRun(c, base + s, k, n, w, wild);
+      if (res) return res;
+    }
+  }
+  return null;
+}
+
+function _buildRun(c, start, k, n, w, wild) {
+  const runKinds = [];
+  function rec(d, wLeft) {
+    if (d === 3) return _buildSets(c, n - 1, wLeft, wild);
+    const t = start + d;
+    if (t === k) {                            // k must use its own natural copy
+      c[t]--; runKinds.push(t);
+      const r = rec(d + 1, wLeft);
+      if (r) return r;
+      c[t]++; runKinds.pop(); return null;
+    }
+    if (c[t] > 0) {
+      c[t]--; runKinds.push(t);
+      const r = rec(d + 1, wLeft);
+      if (r) return r;
+      c[t]++; runKinds.pop();
+    }
+    if (wLeft > 0) {                          // fill the gap with a wild
+      runKinds.push(wild);
+      const r = rec(d + 1, wLeft - 1);
+      if (r) return r;
+      runKinds.pop();
+    }
+    return null;
+  }
+  const rest = rec(0, w);
+  return rest ? [runKinds.slice(), ...rest] : null;
+}
+
+/* The winning hand shown as its sets + pair, so players see the structure. */
+function winGroupsHTML(handKinds, wildKind, meldCount) {
+  const setsNeeded = 4 - (meldCount || 0);
+  const groups = decomposeWin(handKinds, wildKind, setsNeeded);
+  if (!groups) return tilesHTML(handKinds);   // instant win / unusual shape
+  const cluster = (kinds, label) => {
+    const wrap = document.createElement("div");
+    for (const k of kinds) wrap.appendChild(tileEl(k, { small: true }));
+    return `<div class="win-group"><div class="win-group-tiles">${wrap.innerHTML}</div>` +
+           `<span class="win-group-label">${label}</span></div>`;
+  };
+  let html = `<div class="win-groups">`;
+  groups.sets.forEach((set, i) => { html += cluster(set, "Set " + (i + 1)); });
+  html += cluster(groups.pair, "Pair");
+  return html + `</div>`;
 }
 
 /* Render a row of tiles as inline HTML (for tutorial / win screens) */
