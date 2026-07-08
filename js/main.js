@@ -237,6 +237,7 @@ function startHand() {
     s.flowers = [];
     s.drawn = null;
     s.threatWarned = false;
+    s.tenpaiSounded = false;
     s.wind = (i - G.dealer + 4) % 4;
     for (let t = 0; t < 13; t++) s.hand.push(G.wall.pop());
     sortHand(s.hand);
@@ -431,6 +432,10 @@ async function interactiveTurnLoop(seatIdx, mode, gen) {
         let msg = `😻 <b>You're ready (tenpai)!</b> You win the moment anyone discards — or you draw — one of: ${parts.join(", ")}`;
         if (waits.every(k => liveCount(k, seatIdx) === 0)) msg += `<br>⚠️ …though every copy is already visible. That wait is <b>dead</b> — reshape next turn!`;
         coachFor(seatIdx, msg, "😻");
+        // sound: a subtle ping the FIRST time this hand you reach tenpai (not every turn you stay there)
+        if (!s.tenpaiSounded && typeof sndTenpai === "function") { sndTenpai(); s.tenpaiSounded = true; }
+      } else {
+        s.tenpaiSounded = false;   // fell out of tenpai — the ping can fire again if you get back there
       }
       return { type: "discard", kind };
     }
@@ -857,7 +862,7 @@ async function doWin(seat, winTile, selfDraw, discarder, special = {}) {
   clearActions();
   setPrompt("");
   renderAll();
-  if (typeof fxWin === "function") fxWin(seat === 0);
+  if (typeof fxWin === "function") fxWin(seat === 0, threeGold || !!special.qiangJin);
 
   const howType = special.qiangJin ? "qiangjin" : (threeGold && !shapeWin) ? "threegold" : selfDraw ? "selfdraw" : "discard";
   // Structured, safe payload — shared by the host modal, the guest modal, and the log.
@@ -965,6 +970,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("unhandledrejection", e => reportFatal(e.reason));
   applyIcons();
   if (typeof fxInit === "function") fxInit();
+  if (typeof sndInit === "function") sndInit();
   if (typeof analystInit === "function") analystInit();
 
   $("#btn-menu").addEventListener("click", () => {

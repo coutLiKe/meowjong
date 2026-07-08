@@ -76,7 +76,10 @@ header h1 { font-size: 20px; margin: 0; letter-spacing: 0.5px; }
   transition: width 0.4s ease;
 }
 .hud-tabs { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
-.hud-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* M7.5.1: positioned here (not on #hud-settings) so the Options popover anchors
+   to the whole button group's right edge — stable even when the header wraps
+   at in-between widths and #hud-settings itself ends up away from the edge. */
+.hud-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; }
 header button, .toggle {
   font-family: inherit;
   font-size: 13px;
@@ -101,7 +104,7 @@ header button:hover { background: var(--accent-dark); }
 }
 
 /* M7.1 · the ⚙ Options popover — peek/labels/coach/fx moved off the bar */
-#hud-settings { position: relative; }
+#hud-settings { position: static; }
 #hud-settings > summary {
   list-style: none;
   display: inline-flex;
@@ -132,6 +135,7 @@ header button:hover { background: var(--accent-dark); }
 }
 .hud-pop .toggle { justify-content: flex-start; white-space: nowrap; }
 .hud-pop .toggle select { margin-left: auto; }
+.hud-pop .toggle input[type="range"] { margin-left: auto; width: 76px; accent-color: var(--accent); }
 
 /* ---------- M6 · Stage layout ---------- */
 #layout {

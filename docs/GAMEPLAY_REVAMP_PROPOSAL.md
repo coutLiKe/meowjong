@@ -76,7 +76,27 @@ and grow outward toward the screen edge instead of into the board. The "You" pil
 tilted edge. Verified: 64/64 tests, all four side gaps symmetric (pill 26px / rack 12px
 both sides), You pill 29px below, Peek-mode face-up racks clear the felt too, mobile strip
 reverts racks to horizontal with no overflow, zero console errors.
-Remaining (future): M8 sound, M9 full polish pass.
+**M8 sound shipped 2026-07-08** (synthesized, per user decision — no audio files, no
+licensing, stays file://-friendly). New `js/sound.js`: a Web Audio layer in the same
+pure-presentation style as fx.js, with short oscillator tones and filtered-noise-burst
+"clacks" for draw / discard / chi-peng-gang (clack count scales with meld size) / a
+warm win chord (brighter + a shimmer layer for instant wins: 三金倒 / 抢金) / a rising
+tenpai ping (fires once per newly-reached-ready, via a per-seat `tenpaiSounded` flag
+reset each hand, mirroring the existing `threatWarned` flag) / a quiet UI click tick on
+chrome buttons. Hooked into fx.js's existing event functions (`fxAfterDraw`,
+`fxAfterDiscard`, `fxAfterClaim`, `fxWin`) which were restructured so sound fires
+independently of the visual-effects level — previously these all early-returned under
+`!fxMotion()`, which would have wrongly silenced sound at Subtle/Off. **Off by default**;
+a new Sound toggle + volume slider live in the Options popover, and the AudioContext is
+only ever constructed inside that toggle's own click handler (the real user gesture),
+satisfying browser autoplay policy — verified no context exists before opt-in.
+Also fixed in passing: the Options popover clipped off-screen at in-between viewport
+widths (~900-1250px) because it anchored to `#hud-settings`'s own box, which drifts
+away from the screen edge once the header wraps; it now anchors to the stable
+`.hud-tools` button-group edge instead. Verified: 64/64 tests, real gameplay (discard,
+an actual AI chi claim, tenpai, fx-off independence) with zero console errors, mobile +
+mid-width popover clean.
+Remaining (future): M9 full polish pass.
 
 *Original proposal below, retained for reference.*
 **Scope: presentation, immersion, responsiveness, and feel only. FJ rules, the engine, party-mode netcode, and the Paws/Analyst logic are NOT changed.**

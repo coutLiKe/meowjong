@@ -174,7 +174,10 @@ function fxAfterDiscard() {
   const cells = river.querySelectorAll(".river-cell");
   const grew = cells.length > FX._riverLen;
   FX._riverLen = cells.length;
-  if (!grew || !fxMotion()) return;
+  if (!grew) return;
+  // sound is a separate opt-in from visual motion, so it plays even at fx-off
+  if (typeof sndDiscard === "function") sndDiscard();
+  if (!fxMotion()) return;
   const tile = cells[cells.length - 1] && cells[cells.length - 1].querySelector(".tile");
   if (!tile) return;
   const kind = Number(tile.dataset.kind);
@@ -199,6 +202,7 @@ function fxSyncRiver() {
 /* ---------- draw: the freshly drawn tile slides into the hand ---------- */
 
 function fxAfterDraw() {
+  if (typeof sndDraw === "function") sndDraw();
   if (!fxMotion()) return;
   const drawn = $fx("#hand .tile.drawn");
   fxPulse(drawn, "fx-draw-in", 420);
@@ -207,10 +211,10 @@ function fxAfterDraw() {
 /* ---------- claim: the claimed tile flies from the river into the meld ---------- */
 
 function fxAfterClaim(seat) {
-  if (!fxMotion()) return;
   const sel = seat === 0 ? "#your-melds .meld:last-child" : `#opp-${seat} .opp-melds .meld:last-child`;
   const meld = $fx(sel);
-  if (!meld) return;
+  if (meld && typeof sndClaim === "function") sndClaim(meld.children.length);
+  if (!fxMotion() || !meld) return;
   const exit = fxTakeExit(null, "river");   // renderRiver recorded the popped tile
   if (exit) fxFly(exit.rect, meld, exit.kind, true);
   fxPulse(meld, "fx-gather", 520);
@@ -248,7 +252,8 @@ function fxTurnStart() {
 
 /* ---------- win: glow + brief shake + optional confetti ---------- */
 
-function fxWin(youWin) {
+function fxWin(youWin, special) {
+  if (typeof sndWin === "function") sndWin(youWin, special);
   const center = document.getElementById("center");
   if (fxMotion()) fxPulse(center, "fx-winshake", 700);
   const hand = document.getElementById("hand");
