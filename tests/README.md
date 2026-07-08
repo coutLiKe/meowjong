@@ -27,6 +27,7 @@ save blob is shared-mutable global), so groups that mutate state call it per fil
 | `ai.test.js` | `chooseDiscard` never sheds a gold, `roughShanten` sanity, live-tile counting |
 | `net.test.js` | `escapeHtml`, `sanitizeName` & `sanitizeMarkup` injection guards |
 | `save.test.js` | save/resume round-trip + corruption/version/party-blob rejection + private-mode storage guard |
+| `fairness.test.js` | **randomization fairness** — replicates the real deal and asserts no seat (incl. the human) is favored, dealer role is tempo-only, shuffle is position-uniform, deal conserves all 124 tiles, and kind frequency is uniform (statistical, wide tolerances) |
 
 ## Adding tests
 

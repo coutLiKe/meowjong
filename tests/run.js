@@ -8,6 +8,7 @@ require("./scoring.test");
 require("./ai.test");
 require("./net.test");
 require("./save.test");
+require("./fairness.test");
 
 const { run } = require("./harness");
 process.exit(run());
