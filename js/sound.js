@@ -130,11 +130,13 @@ function sndDiscard() {
   sndClack(0.06, 950, 0.3);
 }
 
-/* size = number of tiles in the claimed meld (3 for chi/pung, 4 for a kong) */
+/* size = number of tiles in the claimed meld (3 for chi/pung, 4 for a kong).
+   M10: opens with a low felt THUMP so claims land with real weight. */
 function sndClaim(size) {
   const n = Math.max(2, size || 3);
-  for (let i = 0; i < n; i++) sndClack(0.05, 1050, 0.28, i * 0.06);
-  sndTone(880, 0.14, "triangle", 0.12, n * 0.06);
+  sndClack(0.09, 480, 0.32);
+  for (let i = 0; i < n; i++) sndClack(0.05, 1050, 0.28, 0.02 + i * 0.06);
+  sndTone(880, 0.14, "triangle", 0.12, 0.02 + n * 0.06);
 }
 
 function sndTenpai() {

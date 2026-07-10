@@ -219,6 +219,43 @@ function fxAfterClaim(seat) {
   if (exit) fxFly(exit.rect, meld, exit.kind, true);
   fxPulse(meld, "fx-gather", 520);
   setTimeout(() => fxSpark(meld), 360);     // M9: a little spark as it locks in
+  // M10: shout the call over the meld, and the claiming cat gets excited
+  const melds = (typeof G !== "undefined" && G.seats && G.seats[seat]) ? G.seats[seat].melds : null;
+  const last = melds && melds.length ? melds[melds.length - 1] : null;
+  const word = last ? ({ chow: "CHI!", pung: "PENG!", kong: "GANG!" })[last.type] : null;
+  if (word) setTimeout(() => fxClaimPop(meld, word), 160);
+  if (seat > 0) fxEmote(seat, "😼");
+}
+
+/* A bold call-out ("PENG!") that pops above an element, then floats away. */
+function fxClaimPop(el, text) {
+  if (!fxMotion() || !el) return;
+  const r = el.getBoundingClientRect();
+  if (!r.width) return;
+  const pop = document.createElement("div");
+  pop.className = "fx-claim-pop";
+  pop.textContent = text;
+  pop.style.left = (r.left + r.width / 2) + "px";
+  pop.style.top = (r.top - 4) + "px";
+  document.body.appendChild(pop);
+  setTimeout(() => pop.remove(), 900);
+}
+
+/* The cat reacts: its name pill bounces and an emoji floats up from it. */
+function fxEmote(seat, emoji) {
+  if (!fxMotion()) return;
+  const pill = $fx(`#opp-${seat} .opp-top`);
+  if (!pill) return;
+  fxPulse(pill, "fx-bounce", 650);
+  const r = pill.getBoundingClientRect();
+  if (!r.width) return;
+  const e = document.createElement("div");
+  e.className = "fx-emote";
+  e.textContent = emoji;
+  e.style.left = (r.left + r.width / 2) + "px";
+  e.style.top = r.top + "px";
+  document.body.appendChild(e);
+  setTimeout(() => e.remove(), 1100);
 }
 
 /* ---------- hover: tiles tilt toward the cursor (full effects only) ---------- */
