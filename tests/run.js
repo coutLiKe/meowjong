@@ -6,6 +6,7 @@ require("./tiles.test");
 require("./engine.test");
 require("./scoring.test");
 require("./ai.test");
+require("./shanten.test");
 require("./net.test");
 require("./save.test");
 require("./fairness.test");

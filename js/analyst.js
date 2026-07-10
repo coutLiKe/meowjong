@@ -46,29 +46,62 @@ function anEstMyWin(selfDraw) {
   return fjScore(G.seats[0], { selfDraw }).total;
 }
 
-/* Evaluate the hand left after discarding `kind` from `tiles` */
+/* Evaluate the hand left after discarding `kind` from `tiles`.
+   The core efficiency metric is UKEIRE (tile acceptance): exact shanten plus
+   the count of live tiles that improve the hand. Everything ranks off this. */
 function anEvalDiscard(tiles, kind) {
   const wild = wildOf();
   const melds = G.seats[0].melds;
   const rest = tiles.slice();
   rest.splice(rest.indexOf(kind), 1);
-  const sh = roughShanten(rest, melds, wild);
+  const uke = fjUkeire(rest, melds, wild);
+  const sh = uke.shanten;
   let waits = [], outs = 0, goldOuts = 0;
   if (sh === 0) {
-    waits = winningKinds(rest, melds, wild);
-    outs = waits.reduce((a, k) => a + liveCount(k), 0);
+    waits = uke.tiles.map(t => t.kind);
+    outs = uke.total;
     if (wild >= 0 && !waits.includes(wild)) goldOuts = liveCount(wild); // any gold completes a ready hand
   }
-  const c = countsOf(rest);
-  if (wild >= 0) c[wild] = 0;
-  const shape = evalCounts(c);
-  // heuristic win probability by distance-to-ready
-  let pWin;
-  if (sh === 0) pWin = Math.min(0.55, 0.10 + 0.045 * (outs + goldOuts));
-  else if (sh === 1) pWin = 0.16 + Math.min(0.08, shape / 4000);
-  else if (sh === 2) pWin = 0.08;
-  else pWin = 0.03;
-  return { rest, sh, waits, outs, goldOuts, shape, pWin };
+  const pWin = anWinProb(sh, uke.total, outs + goldOuts);
+  return { rest, sh, waits, outs, goldOuts, ukeire: uke.total, ukeTiles: uke.tiles, pWin };
+}
+
+/* Total unseen suit tiles from your view — the pool your next draw comes from. */
+function anUnseenSuitTiles() {
+  let n = 0;
+  for (let k = 0; k < 27; k++) n += liveCount(k);
+  return n;
+}
+
+function _binom(n, k) { let r = 1; for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1); return r; }
+
+/* Win probability grounded in acceptance. You need `sh+1` useful draws to
+   complete (sh to reach ready, one to win); model each of your remaining draws
+   as landing a useful tile with prob ukeire/unseen, and take the binomial tail
+   P(at least sh+1 useful draws). Monotonic in ukeire (wider = better) and in
+   shanten (closer = better) without saturating the way "advance ≥ once" did. */
+function anWinProb(sh, ukeire, outs) {
+  if (sh === 0) return Math.min(0.9, 0.12 + 0.05 * outs);        // ready: your outs decide it
+  const drawsLeft = Math.max(1, Math.min(18, Math.floor((((typeof G !== "undefined" && G.wall) ? G.wall.length : 40)) / 4)));
+  const unseen = Math.max(8, anUnseenSuitTiles());
+  const adv = Math.min(0.85, ukeire / unseen);
+  const need = sh + 1;
+  let p = 0;
+  for (let i = need; i <= drawsLeft; i++) p += _binom(drawsLeft, i) * Math.pow(adv, i) * Math.pow(1 - adv, drawsLeft - i);
+  return Math.max(0.005, Math.min(0.9, p));
+}
+
+/* Rank order (efficiency assistant): fewer steps from ready first, then WIDER
+   acceptance (ukeire) — the standard efficiency metric — then EV, which folds
+   in deal-in risk. Risk is shown on every row so the player can override for
+   defense. Non-discard actions (win/kong) sort by EV. */
+function anCompareRows(a, b) {
+  if (a.type === "discard" && b.type === "discard") {
+    if (a.sh !== b.sh) return a.sh - b.sh;
+    if ((b.ukeire || 0) !== (a.ukeire || 0)) return (b.ukeire || 0) - (a.ukeire || 0);
+    return b.ev - a.ev;
+  }
+  return b.ev - a.ev;
 }
 
 /* ---------- Layer 2: threat model ---------- */
@@ -150,6 +183,7 @@ function anAnalyzeTurn() {
       type: "discard", kind: k,
       label: `Discard ${tileShort(k)}`,
       sh: ev.sh, waits: ev.waits, outs: ev.outs, goldOuts: ev.goldOuts,
+      ukeire: ev.ukeire, ukeTiles: ev.ukeTiles,
       pWin: ev.pWin, risk: risk.p, riskNote: risk.note,
       ev: ev.pWin * myWinPts * 3 - risk.p * maxPay * 2,
       rest: ev.rest,
@@ -161,7 +195,7 @@ function anAnalyzeTurn() {
     rows.push({ type: "note", label: `Discard ${tileShort(wild)} 🥇`, ev: -999,
       detail: "Excluded on principle: a gold is strictly better in your hand than in the river — and it can hand someone the win." });
   }
-  rows.sort((a, b) => b.ev - a.ev);
+  rows.sort(anCompareRows);
   return { rows, threats, myWinPts, maxPay };
 }
 
@@ -272,16 +306,17 @@ function anRunSims(analysis, token) {
     const deadline = performance.now() + 40;
     while (performance.now() < deadline) {
       if (ci >= cands.length) {
-        // refine EV with simulated frequencies and re-rank
+        // refine the DEFENSIVE terms from the rollouts (deal-in / others' wins),
+        // but keep the exact ukeire-based pWin — 80 sims with simple bots are too
+        // noisy to out-estimate the acceptance math for our own speed.
         for (const r of cands) {
           const n = Math.max(1, r.sim.n);
-          r.pWin = r.sim.win / n;
-          r.risk = r.sim.dealIn / n;
+          r.risk = Math.max(r.risk, r.sim.dealIn / n);
           r.pOther = r.sim.otherWin / n;
           r.ev = r.pWin * analysis.myWinPts * 3 - r.risk * analysis.maxPay * 2 - r.pOther * analysis.maxPay * 0.5;
           r.refined = true;
         }
-        analysis.rows.sort((a, b) => b.ev - a.ev);
+        analysis.rows.sort(anCompareRows);
         ANALYST.simDone = true;
         anRender();
         return;
@@ -357,7 +392,7 @@ function anFriendlyReason(r) {
     d += ".";
     if (r.outs === 0 && !r.goldOuts) d += `<br>⚠️ …but every copy of those tiles is already visible — that wait is <b>dead</b>. Reshape instead!`;
   } else {
-    d = `<b>${tileShort(r.kind)}</b> is the tile your hand needs <b>least</b> right now — let it go and you're about <b>${r.sh} step${r.sh === 1 ? "" : "s"} from ready</b>.`;
+    d = `<b>${tileShort(r.kind)}</b> is the tile your hand needs <b>least</b> right now — let it go and you're <b>${r.sh} step${r.sh === 1 ? "" : "s"} from ready</b>, still keeping <b>${r.ukeire} tile${r.ukeire === 1 ? "" : "s"}</b> that push you forward.`;
   }
   if (r.riskNote) d += `<br>🛡️ Safety check: ${r.riskNote}.`;
   return d;
@@ -382,7 +417,9 @@ function anRender() {
 
   if (!a.claim) {
     const best = rows[0];
-    html += `<div class="an-summary">${ANALYST.simDone ? "" : `<span class="an-est">simulating…</span> `}best line: <b>${best.label}</b> (EV ${best.ev.toFixed(1)})</div>`;
+    let tag = "";
+    if (best.type === "discard") tag = best.sh === 0 ? ` — ready, ${best.outs} outs` : ` — ${best.sh} from ready, keeps ${best.ukeire} tiles`;
+    html += `<div class="an-summary">${ANALYST.simDone ? "" : `<span class="an-est">simulating…</span> `}best line: <b>${best.label}</b>${tag}</div>`;
   } else {
     html += `<div class="an-summary">claim decision — ranked:</div>`;
   }
@@ -391,7 +428,9 @@ function anRender() {
     const open = ANALYST.expanded === i;
     let meta = "";
     if (r.type === "discard") {
-      meta = `<span class="an-num">EV ${r.ev.toFixed(1)}</span><span class="an-num">win ${fmtP(r.pWin)}</span><span class="an-num ${r.risk > 0.15 ? "an-bad" : ""}">risk ${fmtP(r.risk)}</span>${r.refined ? "" : `<span class="an-est">est.</span>`}`;
+      const shTag = r.sh === 0 ? `<span class="an-num an-good">ready</span>` : `<span class="an-num">${r.sh} away</span>`;
+      const width = r.sh === 0 ? `${r.outs} out${r.outs === 1 ? "" : "s"}` : `keeps ${r.ukeire}`;
+      meta = `${shTag}<span class="an-num">${width}</span><span class="an-num ${r.risk > 0.15 ? "an-bad" : ""}">risk ${fmtP(r.risk)}</span>${r.refined ? "" : `<span class="an-est">est.</span>`}`;
     } else if (r.type === "claim" || r.type === "kong") {
       meta = r.ev > 900 ? `<span class="an-num an-good">take it</span>` : `<span class="an-num">score ${r.ev.toFixed(0)}</span>`;
     }
@@ -436,7 +475,12 @@ function anDetail(r) {
     if (r.goldOuts) d += ` +${r.goldOuts} gold draw${r.goldOuts === 1 ? "" : "s"}`;
     d += ".<br>";
   } else {
-    d += `Leaves you ~<b>${r.sh}</b> step${r.sh === 1 ? "" : "s"} from ready.<br>`;
+    d += `Leaves you <b>${r.sh}</b> step${r.sh === 1 ? "" : "s"} from ready, keeping <b>${r.ukeire}</b> tile${r.ukeire === 1 ? "" : "s"} that improve the hand`;
+    if (r.ukeTiles && r.ukeTiles.length) {
+      const top = r.ukeTiles.slice().sort((a, b) => b.live - a.live).slice(0, 4).map(t => `${tileShort(t.kind)}(${t.live})`).join(", ");
+      d += ` — mainly ${top}`;
+    }
+    d += `.<br>`;
   }
   d += `Safety: ${r.riskNote}.`;
   if (r.refined && r.sim.n) {

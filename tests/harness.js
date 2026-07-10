@@ -25,7 +25,7 @@ const EXPORTS = [
   "buildWall", "sortHand", "countsOf",
   "canFormSetsW", "isWinningCounts", "winningKinds", "fjScore", "fjPayout",
   "canPung", "canKongFromDiscard", "chowOptions", "concealedKongs", "addedKongs",
-  "evalCounts", "chooseDiscard", "roughShanten", "bestShape", "aiWantsPung", "aiWantsChow",
+  "evalCounts", "chooseDiscard", "roughShanten", "fjShanten", "fjUkeire", "bestShape", "aiWantsPung", "aiWantsChow",
   "visibleKindCounts", "liveCount", "dangerNote",
   "escapeHtml", "sanitizeName", "sanitizeMarkup", "isPartyMode", "projectFor",
   "isSoloMatch", "saveMatch", "loadMatch", "clearSave", "storeGet", "storeSet",

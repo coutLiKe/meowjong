@@ -80,16 +80,100 @@ function chooseDiscard(hand, wildKind = -1) {
   return best;
 }
 
-/* Rough distance-to-win estimate (0 = ready). Each gold ≈ one free step. */
-function roughShanten(hand, melds, wildKind = -1) {
-  if (winningKinds(hand, melds, wildKind).length > 0) return 0;
-  const wilds = wildKind >= 0 ? hand.filter(t => t === wildKind).length : 0;
+/* ---------- exact shanten + ukeire (the efficiency math) ----------
+   FJ winning shape: 4 sets + 1 pair. Wilds (golds) are jokers that can
+   complete any SET but never the pair. Shanten is exact (validated against a
+   brute-force reference in tests/shanten.test.js); it replaces the old rough
+   estimate so the coach and the Analyst rank by real tile efficiency. */
+
+/* Max (2·sets + partials) extractable from natural counts `c` using at most
+   `slots` set-slots. A pair counts as a partial (proto-triplet). Memoized. */
+function _blocks(c, i, slots, memo) {
+  if (slots <= 0) return 0;
+  while (i < 27 && c[i] === 0) i++;
+  if (i >= 27) return 0;
+  const key = i + "|" + slots + "|" + c.join("");
+  const hit = memo.get(key);
+  if (hit !== undefined) return hit;
+  let best = 0;
+  c[i]--; best = _blocks(c, i, slots, memo); c[i]++;                       // floater: skip a copy
+  if (c[i] >= 3) { c[i] -= 3; best = Math.max(best, 2 + _blocks(c, i, slots - 1, memo)); c[i] += 3; } // triplet
+  if (c[i] >= 2) { c[i] -= 2; best = Math.max(best, 1 + _blocks(c, i, slots - 1, memo)); c[i] += 2; } // pair
+  const r = i % 9;
+  if (r <= 6 && c[i + 1] > 0 && c[i + 2] > 0) { c[i]--; c[i+1]--; c[i+2]--; best = Math.max(best, 2 + _blocks(c, i, slots - 1, memo)); c[i]++; c[i+1]++; c[i+2]++; } // run
+  if (r <= 7 && c[i + 1] > 0) { c[i]--; c[i+1]--; best = Math.max(best, 1 + _blocks(c, i, slots - 1, memo)); c[i]++; c[i+1]++; } // ryanmen/penchan
+  if (r <= 6 && c[i + 2] > 0) { c[i]--; c[i+2]--; best = Math.max(best, 1 + _blocks(c, i, slots - 1, memo)); c[i]++; c[i+2]++; } // kanchan
+  memo.set(key, best);
+  return best;
+}
+
+/* Jokerless standard-form shanten for `needSets` sets + 1 pair from counts c. */
+function _shStd(c, needSets) {
+  if (needSets <= 0) {                       // all sets claimed — only the pair remains
+    for (let j = 0; j < 27; j++) if (c[j] >= 2) return -1;   // pair present → complete
+    return 0;                                                // tenpai on the pair
+  }
+  let best = 2 * needSets - _blocks(c.slice(), 0, needSets, new Map());   // no eyes reserved
+  for (let j = 0; j < 27; j++) {                                          // reserve a natural pair as eyes
+    if (c[j] >= 2) {
+      c[j] -= 2;
+      best = Math.min(best, 2 * needSets - 1 - _blocks(c.slice(), 0, needSets, new Map()));
+      c[j] += 2;
+    }
+  }
+  return best;
+}
+
+/* Exact distance to ready (0 = tenpai). Golds fill set-tiles, never the pair.
+   The decomposition is a valid shanten for everything ≥ 1; only when it reports
+   "ready" do we confirm with the exact win-checker, because a gold can look like
+   it completes the hand yet can't serve as the pair. */
+function fjShanten(hand, melds, wildKind = -1) {
+  const w = wildKind >= 0 ? hand.filter(t => t === wildKind).length : 0;
   const c = countsOf(hand);
   if (wildKind >= 0) c[wildKind] = 0;
-  const { m, p, pair } = bestShape(c, 0, new Map());
-  const totalM = m + melds.length;
-  const usefulP = Math.min(p, 4 - totalM);
-  return Math.max(1, 8 - 2 * totalM - usefulP - (pair ? 1 : 0) - wilds);
+  const needSets = 4 - melds.length;
+  const sh = Math.max(0, _shStd(c, needSets) - w);   // each gold pre-fills one missing set-tile
+  if (sh >= 1) return sh;
+  return winningKinds(hand, melds, wildKind).length > 0 ? 0 : 1;   // confirm the boundary
+}
+
+/* Tile acceptance ("ukeire"): which draws lower the shanten, and how many of
+   each are still live. total = the hand's width — the number good players
+   maximize. Shanten is only defined on a "waiting" hand (13, 10, 7… tiles), so
+   a candidate tile counts when drawing it and discarding back down reaches a
+   lower shanten. On a ready hand this is exactly the winning tiles. */
+function fjUkeire(hand, melds, wildKind = -1) {
+  const s = fjShanten(hand, melds, wildKind);
+  const tiles = [];
+  let total = 0;
+  if (s === 0) {
+    for (const k of winningKinds(hand, melds, wildKind)) {
+      const live = liveCount(k);
+      tiles.push({ kind: k, live });
+      total += live;
+    }
+    return { shanten: 0, tiles, total };
+  }
+  for (let k = 0; k < 27; k++) {                       // only suit tiles are ever drawn into a hand
+    const drawn = hand.concat([k]);
+    let improves = false;
+    for (const d of new Set(drawn)) {                  // best discard back to a waiting hand
+      const back = drawn.slice();
+      back.splice(back.indexOf(d), 1);
+      if (fjShanten(back, melds, wildKind) < s) { improves = true; break; }
+    }
+    if (improves) {
+      const live = liveCount(k);
+      if (live > 0) { tiles.push({ kind: k, live }); total += live; }
+    }
+  }
+  return { shanten: s, tiles, total };
+}
+
+/* Back-compat name used by the coach + Analyst — now exact. */
+function roughShanten(hand, melds, wildKind = -1) {
+  return fjShanten(hand, melds, wildKind);
 }
 
 function bestShape(c, i, memo) {
