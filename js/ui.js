@@ -428,8 +428,16 @@ function endModalHtml(d) {
   body += `<p><b>Scoring:</b></p><ul class="fan-list">`;
   for (const l of (d.scoreLines || [])) body += `<li>${esc(l.name)} — ${esc(l.desc)} <b>(+${l.pts | 0})</b></li>`;
   const from = d.everyonePays ? "(everyone pays)" : `— mostly from ${esc(d.discarderName || "")}, who discarded the winning tile`;
-  body += `</ul><p><b>Total: ${d.total | 0} points</b> → ${esc(d.winnerName || "")} collects <b>${d.winnerPayout | 0}</b> ${from}.</p>`;
+  body += `</ul><p><b>Total: <span class="win-total" data-total="${d.total | 0}">${d.total | 0}</span> points</b> → ${esc(d.winnerName || "")} collects <b>${d.winnerPayout | 0}</b> ${from}.</p>`;
   return h2 + body;
+}
+
+/* End-of-hand modal + the staged win ceremony (fxWinSequence). One entry
+   point shared by the host (doWin) and party guests (net.js), so both get
+   the same reveal; with motion off the modal just appears complete. */
+function showEndModal(html, buttons) {
+  showModal(html, buttons);
+  if (typeof fxWinSequence === "function") fxWinSequence($("#modal"));
 }
 
 /* ---------- Winning-path visualization (presentation only) ----------

@@ -886,13 +886,20 @@ async function doWin(seat, winTile, selfDraw, discarder, special = {}) {
   };
   log(`<b>${s.emoji} ${s.name} wins ${endHowText(common)}</b>`, "log-important");
 
-  showModal(endModalHtml(Object.assign({ youWin: s.control === "local" }, common)), [
-    { label: "Next hand", cls: "primary", cb: () => { hideModal(); nextHand(seat); } },
-    { label: "New match", cls: "secondary", cb: () => { hideModal(); newMatch(); } },
-  ]);
-  if (typeof netBroadcastEndModal === "function") {
-    netBroadcastEndModal(guestSeat => Object.assign({ youWin: guestSeat === seat }, common));
-  }
+  // M10: give the table celebration (shake / glow / confetti) a beat to land,
+  // then run the staged scoring ceremony. Presentation-only delay — all state
+  // is already committed above, and guests are notified on the same beat.
+  const revealEndModal = () => {
+    showEndModal(endModalHtml(Object.assign({ youWin: s.control === "local" }, common)), [
+      { label: "Next hand", cls: "primary", cb: () => { hideModal(); nextHand(seat); } },
+      { label: "New match", cls: "secondary", cb: () => { hideModal(); newMatch(); } },
+    ]);
+    if (typeof netBroadcastEndModal === "function") {
+      netBroadcastEndModal(guestSeat => Object.assign({ youWin: guestSeat === seat }, common));
+    }
+  };
+  if (typeof fxMotion === "function" && fxMotion()) setTimeout(revealEndModal, 900);
+  else revealEndModal();
 }
 
 function drawGame() {

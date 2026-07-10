@@ -442,7 +442,8 @@ function guestOnData(d) {
       break;
     case "modal":
       // structured end-of-hand data only — never raw host HTML
-      showModal(endModalHtml(d.data) + "<p><i>Waiting for the host to start the next hand…</i></p>", []);
+      // (showEndModal = showModal + the staged win ceremony)
+      showEndModal(endModalHtml(d.data) + "<p><i>Waiting for the host to start the next hand…</i></p>", []);
       break;
     case "modalClose":
       hideModal();

@@ -130,11 +130,13 @@ function sndDiscard() {
   sndClack(0.06, 950, 0.3);
 }
 
-/* size = number of tiles in the claimed meld (3 for chi/pung, 4 for a kong) */
+/* size = number of tiles in the claimed meld (3 for chi/pung, 4 for a kong).
+   M10: opens with a low felt THUMP so claims land with real weight. */
 function sndClaim(size) {
   const n = Math.max(2, size || 3);
-  for (let i = 0; i < n; i++) sndClack(0.05, 1050, 0.28, i * 0.06);
-  sndTone(880, 0.14, "triangle", 0.12, n * 0.06);
+  sndClack(0.09, 480, 0.32);
+  for (let i = 0; i < n; i++) sndClack(0.05, 1050, 0.28, 0.02 + i * 0.06);
+  sndTone(880, 0.14, "triangle", 0.12, 0.02 + n * 0.06);
 }
 
 function sndTenpai() {
@@ -152,6 +154,21 @@ function sndWin(youWin, special) {
 
 function sndClick() {
   sndTone(500, 0.035, "square", 0.05);
+}
+
+/* ---------- M10 · win-ceremony voices ---------- */
+
+/* One rising tick per scoring line as it pops in — the pitch climbs with the
+   line index so a long fan list reads as a crescendo. */
+function sndScoreTick(i) {
+  sndTone(620 + Math.min(i, 8) * 85, 0.07, "triangle", 0.1);
+}
+
+/* The total lands: a felt thump plus a bright rising fifth. */
+function sndScoreTotal() {
+  sndClack(0.09, 700, 0.34);
+  sndTone(1046.5, 0.3, "sine", 0.12, 0.03);
+  sndTone(1568, 0.25, "sine", 0.08, 0.09);
 }
 
 /* Quiet feedback tick on chrome/menu buttons and toggles — not on the in-game

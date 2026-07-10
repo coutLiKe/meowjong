@@ -219,6 +219,43 @@ function fxAfterClaim(seat) {
   if (exit) fxFly(exit.rect, meld, exit.kind, true);
   fxPulse(meld, "fx-gather", 520);
   setTimeout(() => fxSpark(meld), 360);     // M9: a little spark as it locks in
+  // M10: shout the call over the meld, and the claiming cat gets excited
+  const melds = (typeof G !== "undefined" && G.seats && G.seats[seat]) ? G.seats[seat].melds : null;
+  const last = melds && melds.length ? melds[melds.length - 1] : null;
+  const word = last ? ({ chow: "CHI!", pung: "PENG!", kong: "GANG!" })[last.type] : null;
+  if (word) setTimeout(() => fxClaimPop(meld, word), 160);
+  if (seat > 0) fxEmote(seat, "😼");
+}
+
+/* A bold call-out ("PENG!") that pops above an element, then floats away. */
+function fxClaimPop(el, text) {
+  if (!fxMotion() || !el) return;
+  const r = el.getBoundingClientRect();
+  if (!r.width) return;
+  const pop = document.createElement("div");
+  pop.className = "fx-claim-pop";
+  pop.textContent = text;
+  pop.style.left = (r.left + r.width / 2) + "px";
+  pop.style.top = (r.top - 4) + "px";
+  document.body.appendChild(pop);
+  setTimeout(() => pop.remove(), 900);
+}
+
+/* The cat reacts: its name pill bounces and an emoji floats up from it. */
+function fxEmote(seat, emoji) {
+  if (!fxMotion()) return;
+  const pill = $fx(`#opp-${seat} .opp-top`);
+  if (!pill) return;
+  fxPulse(pill, "fx-bounce", 650);
+  const r = pill.getBoundingClientRect();
+  if (!r.width) return;
+  const e = document.createElement("div");
+  e.className = "fx-emote";
+  e.textContent = emoji;
+  e.style.left = (r.left + r.width / 2) + "px";
+  e.style.top = r.top + "px";
+  document.body.appendChild(e);
+  setTimeout(() => e.remove(), 1100);
 }
 
 /* ---------- hover: tiles tilt toward the cursor (full effects only) ---------- */
@@ -362,4 +399,81 @@ function fxSpark(el) {
     s.style.opacity = "0";
     setTimeout(() => s.remove(), 480);
   }
+}
+
+/* ============================================================
+   M10 · the win ceremony — staged scoring reveal in the end modal.
+   The modal's blocks pop in one at a time (hand groups → scoring
+   lines with rising ticks → the total counting up with a punch),
+   and any click fast-forwards to the finished modal. Pure
+   presentation: with motion off (or reduced) the modal simply
+   appears complete, exactly as before.
+   ============================================================ */
+
+FX._wseqTok = 0;
+
+function fxWinSequence(modal) {
+  const token = ++FX._wseqTok;               // cancels any previous ceremony
+  if (!fxMotion() || FX.reduced || !modal) return;
+  const content = modal.querySelector("#modal-content");
+  const buttons = modal.querySelector("#modal-buttons");
+  if (!content) return;
+
+  // Reveal units: top-level blocks, with the hand groups and the scoring
+  // lines exploded so each one pops individually.
+  const units = [];
+  for (const el of content.children) {
+    if (el.classList && el.classList.contains("win-groups")) units.push(...el.children);
+    else if (el.tagName === "UL") units.push(...el.children);
+    else units.push(el);
+  }
+  if (units.length < 3) return;              // draws/tiny modals: not worth staging
+  const totalEl = content.querySelector(".win-total");
+
+  for (const u of units) u.classList.add("wseq-hide");
+  if (buttons) buttons.classList.add("wseq-hide");
+
+  const timers = [];
+  const finish = () => {
+    for (const t of timers) clearTimeout(t);
+    for (const u of units) u.classList.remove("wseq-hide");
+    if (buttons) buttons.classList.remove("wseq-hide");
+    if (totalEl) {
+      totalEl._scoreTok = (totalEl._scoreTok || 0) + 1;   // stop a running count-up
+      totalEl.textContent = totalEl.dataset.total || totalEl.textContent;
+    }
+    modal.removeEventListener("click", skip, true);
+  };
+  const skip = () => { if (token === FX._wseqTok) finish(); };
+  modal.addEventListener("click", skip, true);   // impatient? one click shows it all
+
+  let t = 80, lineIdx = 0;
+  for (const u of units) {
+    const isGroup = u.classList.contains("win-group");
+    const isLine = u.tagName === "LI";
+    const li = lineIdx;
+    if (isLine) lineIdx++;
+    const holdsTotal = !!(totalEl && u.contains(totalEl));
+    timers.push(setTimeout(() => {
+      if (token !== FX._wseqTok) return;
+      u.classList.remove("wseq-hide");
+      u.classList.add("wseq-in");
+      if (isGroup && typeof sndClack === "function") sndClack(0.05, 1100, 0.22);
+      else if (isLine && typeof sndScoreTick === "function") sndScoreTick(li);
+      if (holdsTotal) {
+        if (typeof fxCountUp === "function" && totalEl) {
+          totalEl._scoreVal = 0;
+          fxCountUp(totalEl, Number(totalEl.dataset.total) || 0);
+        }
+        if (totalEl) totalEl.classList.add("wseq-total-pop");
+        if (typeof sndScoreTotal === "function") sndScoreTotal();
+      }
+    }, t));
+    t += holdsTotal ? 650 : isGroup ? 200 : isLine ? 260 : 140;
+  }
+  timers.push(setTimeout(() => {
+    if (token !== FX._wseqTok) return;
+    if (buttons) { buttons.classList.remove("wseq-hide"); buttons.classList.add("wseq-in"); }
+    modal.removeEventListener("click", skip, true);
+  }, t + 220));
 }
