@@ -1,13 +1,31 @@
 # 🀄 Meowjong — Learn & Play FJ (Fujian) Mahjong
 
-A beginner-friendly implementation of **FJ (Fujian/Fuzhou) style 4-player mahjong** — the
-fast, gold-rush variant — with traditional tiles, a built-in teacher (**Professor Paws** 🎓),
-and an online **party mode** for playing with friends. This is the only variant implemented.
+**▶ Play now: https://coutlike.github.io/meowjong/** — free, no install, right in your browser.
 
-## How to run
+![Meowjong — a 3D mahjong table with café-cat opponents](assets/og-image.png)
+
+A beginner-friendly implementation of **FJ (Fujian/Fuzhou) style 4-player mahjong** — the
+fast, gold-rush variant — with a 3D table, café-cat opponents, a built-in teacher
+(**Professor Paws** 🎓), synthesized sound, and an online **party mode (beta)** for playing
+with friends. This is the only variant implemented.
+
+## Highlights
+
+- **A real table, not a webpage** — perspective-tilted felt, tiles with physical thickness,
+  a depleting wall, tile flights and claim slams, an animated win ceremony, and expressive
+  cats. All effects are optional (Full 3D / Subtle / Off) and respect `prefers-reduced-motion`.
+- **Learns you into the game** — an interactive tutorial, a Strategy School, and a coach
+  whose advice runs on exact efficiency math (shanten + tile acceptance).
+- **Accessible** — fully keyboard-playable hand, labelled tiles, live-region narration.
+- **Zero build, zero server** — plain HTML/CSS/JS; sound is synthesized (no audio files);
+  the only dependency is PeerJS for party mode.
+
+## How to run locally
 
 Open `index.html` in any modern browser (double-click it). No install, no build.
 Party mode needs an internet connection (it uses the free PeerJS peer-to-peer service).
+
+Tests: `node tests/run.js` (or `npm test`).
 
 ## FJ rules implemented
 
@@ -26,11 +44,14 @@ Party mode needs an internet connection (it uses the free PeerJS peer-to-peer se
 - Chi only from the previous player; peng/gang from anyone; concealed/added gangs with
   back-wall replacement draws.
 
-## Party mode 🎉
+## Party mode 🎉 (beta)
 
 Real 4-player mahjong over the internet, no server to set up: host gets a 4-letter room
 code, up to 3 friends join with it, AI cats fill empty seats and take over on disconnect.
 Everyone sees the table from their own seat (flower rows and the gold are public).
+
+> Multiplayer is peer-to-peer and currently **beta** — some networks (strict NATs,
+> corporate firewalls) may fail to connect. [Reports welcome](https://github.com/coutLiKe/meowjong/issues).
 
 ## Learning features
 
@@ -41,13 +62,21 @@ Everyone sees the table from their own seat (flower rows and the gold are public
   (distance to ready, gold/flower alerts, tenpai/danger warnings) and his **💡 Hint** button
   suggests the discard to make — with live-tile counts, safety reads, and gold warnings.
 - **📊 Show my full analysis** — an expander inside Paws' panel that reveals the *same*
-  engine's full working: **every** legal action ranked by EV / win% / deal-in risk, each
-  opponent modelled (speed × flower payout × suit reads), and Monte Carlo rollouts of
-  simulated futures. Because Paws' Hint and the ranked table read one engine, they never
-  disagree — the tile Paws glows is the table's top line. Design doc:
-  `docs/STRATEGY_ASSISTANT.md`
+  engine's full working: **every** legal action ranked by exact shanten and **ukeire**
+  (tile acceptance), each opponent modelled (speed × flower payout × suit reads), and
+  Monte Carlo rollouts refining the deal-in risk. Because Paws' Hint and the ranked table
+  read one engine, they never disagree. Design doc: `docs/STRATEGY_ASSISTANT.md`
+- **🏆 Winning-path view** — every win is shown grouped into its four sets + pair, so you
+  see *why* the hand wins
 - **👀 Peek mode** — see the AI cats' hands while you learn (single-player only)
 - **🔤 Labels toggle** — corner numbers/letters on tiles while you learn to read the faces
 - **📜 Game log** — every action narrated in plain English
 
-Built with plain HTML/CSS/JS; the only dependency is PeerJS (CDN) for party mode.
+## Feedback
+
+Found a bug, or party mode wouldn't connect? Please
+[open an issue](https://github.com/coutLiKe/meowjong/issues) — it genuinely helps.
+
+## License
+
+[MIT](LICENSE) © 2026 Kevin Lin
