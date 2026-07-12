@@ -27,7 +27,7 @@ const EXPORTS = [
   "canPung", "canKongFromDiscard", "chowOptions", "concealedKongs", "addedKongs",
   "evalCounts", "chooseDiscard", "roughShanten", "fjShanten", "fjUkeire", "bestShape", "aiWantsPung", "aiWantsChow",
   "visibleKindCounts", "liveCount", "dangerNote",
-  "escapeHtml", "sanitizeName", "sanitizeMarkup", "normalizePartyCode", "peerId", "partyPeerOptions", "isPartyMode", "projectFor",
+  "escapeHtml", "sanitizeName", "sanitizeMarkup", "normalizePartyCode", "peerId", "partyPeerOptions", "PARTY_TURN_SERVERS", "isPartyMode", "projectFor",
   "isSoloMatch", "saveMatch", "loadMatch", "clearSave", "storeGet", "storeSet",
   "MATCH_HANDS", "SAVE_VERSION",
   "EMOTES", "EMOTE_ART", "EMOTE_LOADOUT", "EMOTE_RATE", "EMOTE_EVENTS",

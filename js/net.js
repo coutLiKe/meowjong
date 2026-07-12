@@ -31,6 +31,30 @@ const HB_TIMEOUT_MS = 22000;    // no traffic for this long ⇒ peer is gone
 const PROMPT_TIMEOUT_MS = 60000; // a live-but-AFK guest yields to the cat after this
 const PARTY_CONNECT_TIMEOUT_MS = 12000;
 
+/* TURN relay servers — currently NONE, deliberately. The PeerJS project's
+   public TURN (eu-0/us-0.turn.peerjs.com — still referenced by peerjs 1.5.x
+   defaults) no longer exists in DNS, and the classic free relays
+   (openrelay.metered.ca, freeturn.net) are dead too — all verified with real
+   TURN Allocate probes on 2026-07-12. Dead TURN entries aren't harmless:
+   every dead hostname adds DNS timeouts and ICE-gathering noise to every
+   single join attempt, so we list none.
+
+   Without a relay, parties connect across most home networks (direct+STUN),
+   but strict NATs, VPNs, and hotel/corporate Wi-Fi cannot be bridged. To fix
+   that, create a free account with a TURN provider (e.g. metered.ca or
+   expressturn.com), paste its servers below, and the party modal's
+   "🧪 Test my connection" will show the relay working. */
+const PARTY_TURN_SERVERS = [
+  // { urls: ["turn:relay.example.com:80", "turn:relay.example.com:443?transport=tcp"],
+  //   username: "…", credential: "…" },
+];
+
+const PARTY_STUN_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:global.stun.twilio.com:3478" },
+  { urls: "stun:stun.cloudflare.com:3478" },
+];
+
 const PARTY_PEER_OPTIONS = {
   host: "0.peerjs.com",
   port: 443,
@@ -38,22 +62,7 @@ const PARTY_PEER_OPTIONS = {
   key: "peerjs",
   secure: true,
   config: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:global.stun.twilio.com:3478" },
-      {
-        urls: [
-          "turn:eu-0.turn.peerjs.com:3478",
-          "turn:us-0.turn.peerjs.com:3478",
-          "turn:eu-0.turn.peerjs.com:3478?transport=tcp",
-          "turn:us-0.turn.peerjs.com:3478?transport=tcp",
-          "turns:eu-0.turn.peerjs.com:443?transport=tcp",
-          "turns:us-0.turn.peerjs.com:443?transport=tcp",
-        ],
-        username: "peerjs",
-        credential: "peerjsp",
-      },
-    ],
+    iceServers: PARTY_STUN_SERVERS.concat(PARTY_TURN_SERVERS),
     sdpSemantics: "unified-plan",
     iceCandidatePoolSize: 4,
   },
@@ -141,9 +150,13 @@ function netOpenPartyModal() {
       <input id="party-code" maxlength="4" placeholder="CODE" class="party-input code">
       <button class="action-btn" id="party-join-btn">🚪 Join with code</button>
     </div>
-    <p id="party-status" class="log-dim"></p>`,
+    <p id="party-status" class="log-dim"></p>
+    <p style="margin-top:10px"><button class="action-btn secondary" id="party-test-btn">🧪 Test my connection</button>
+    <span class="log-dim">— checks what your network supports before you invite anyone</span></p>
+    <div id="party-test-out" class="log-dim"></div>`,
     [{ label: "Cancel", cls: "secondary", cb: hideModal }]);
   $("#party-host-btn").addEventListener("click", () => startHosting());
+  $("#party-test-btn").addEventListener("click", () => netConnectionTest());
   $("#party-join-btn").addEventListener("click", () => {
     const code = normalizePartyCode($("#party-code").value);
     if (code.length !== 4) { $("#party-status").textContent = "Enter the 4-letter room code."; return; }
@@ -154,6 +167,79 @@ function netOpenPartyModal() {
 function partyStatus(msg) {
   const el = $("#party-status");
   if (el) el.textContent = msg;
+}
+
+/* ---------- Connection self-test (🧪) ----------
+   Answers "why can't we connect?" from the player's OWN network, layer by
+   layer: the signaling service (finding rooms), STUN (public-address
+   discovery, enough for most home networks), and the TURN relay (needed for
+   strict NATs/VPNs — see PARTY_TURN_SERVERS). Pure diagnostics; changes
+   nothing about how parties actually connect. */
+async function netConnectionTest() {
+  const out = $("#party-test-out");
+  if (!out) return;
+  const rows = { sig: "⏳ connection service…", stun: "⏳ public address (STUN)…", turn: "⏳ relay (TURN)…", verdict: "" };
+  const paint = () => {
+    out.innerHTML = "<div>" + [rows.sig, rows.stun, rows.turn].join("</div><div>") + "</div>" +
+      (rows.verdict ? `<div style="margin-top:6px"><b>${rows.verdict}</b></div>` : "");
+  };
+  paint();
+
+  if (!(await ensurePeerLib())) {
+    rows.sig = "❌ couldn't load the multiplayer library";
+    rows.verdict = "Party mode can't start from here — check your internet.";
+    paint();
+    return;
+  }
+
+  // 1 · signaling: open (and immediately discard) a real PeerJS session
+  const sigOk = await new Promise(res => {
+    let p = null;
+    const t = setTimeout(() => { try { if (p) p.destroy(); } catch (e) {} res(false); }, 6000);
+    try {
+      p = new Peer(partyPeerOptions());
+      p.on("open", () => { clearTimeout(t); try { p.destroy(); } catch (e) {} res(true); });
+      p.on("error", () => { clearTimeout(t); try { p.destroy(); } catch (e) {} res(false); });
+    } catch (e) { clearTimeout(t); res(false); }
+  });
+  rows.sig = sigOk ? "✅ connection service reachable"
+                   : "❌ connection service unreachable — firewall or no internet";
+  paint();
+
+  // 2+3 · ICE: gather candidates of one type from a throwaway data channel
+  const gather = (servers, wantRelay) => new Promise(res => {
+    let n = 0, pc = null;
+    try {
+      pc = new RTCPeerConnection({ iceServers: servers, iceTransportPolicy: wantRelay ? "relay" : "all" });
+    } catch (e) { res(0); return; }
+    pc.createDataChannel("probe");
+    pc.onicecandidate = e => {
+      if (e.candidate && e.candidate.candidate.indexOf("typ " + (wantRelay ? "relay" : "srflx")) >= 0) n++;
+    };
+    pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {});
+    setTimeout(() => { try { pc.close(); } catch (e) {} res(n); }, 5000);
+  });
+
+  rows.stun = (await gather(PARTY_STUN_SERVERS, false)) > 0
+    ? "✅ public address found (STUN)"
+    : "⚠️ no public address — this network hides you from other players";
+  paint();
+
+  if (!PARTY_TURN_SERVERS.length) {
+    rows.turn = "⚠️ no relay configured — strict networks can't be bridged";
+  } else {
+    rows.turn = (await gather(PARTY_TURN_SERVERS, true)) > 0
+      ? "✅ relay working"
+      : "❌ relay configured but not answering";
+  }
+  paint();
+
+  const stunOk = rows.stun.startsWith("✅"), turnOk = rows.turn.startsWith("✅");
+  rows.verdict = !sigOk ? "Party mode won't work from this network."
+    : turnOk ? "All good — even strict networks should connect."
+    : stunOk ? "Most home networks will connect. VPN, hotel, or corporate Wi‑Fi may still fail — if it does, a phone hotspot on one side usually works."
+    : "This network likely can't do peer-to-peer at all — try a phone hotspot.";
+  paint();
 }
 
 /* Strip a player-supplied name to a safe set — prevents HTML/script injection
@@ -492,7 +578,7 @@ async function startJoining(code) {
       timedOut = true;
       try { conn.close(); } catch (e) {}
       if (NET.role !== "guest") destroyPeerQuietly();
-      partyStatus("Couldn't connect to the host. The room code exists, but WebRTC couldn't make a route between you two — ask the host to keep the lobby open and try again, or have one player switch off VPN/corporate Wi‑Fi.");
+      partyStatus("Couldn't connect to the host. The room exists, but no network route could be built between you two — run 🧪 Test my connection (both of you) to see why, and try switching one player off VPN/corporate Wi‑Fi or onto a phone hotspot.");
     }, PARTY_CONNECT_TIMEOUT_MS);
   });
 }

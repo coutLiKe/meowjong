@@ -50,8 +50,11 @@ Real 4-player mahjong over the internet, no server to set up: host gets a 4-lett
 code, up to 3 friends join with it, AI cats fill empty seats and take over on disconnect.
 Everyone sees the table from their own seat (flower rows and the gold are public).
 
-> Multiplayer is peer-to-peer and currently **beta** — some networks (strict NATs,
-> corporate firewalls) may fail to connect. [Reports welcome](https://github.com/coutLiKe/meowjong/issues).
+> Multiplayer is peer-to-peer and currently **beta** — it connects directly between
+> players (no relay server), which works on most home networks but **not** across
+> strict NATs, VPNs, or hotel/corporate Wi-Fi. Use **🎉 Party → 🧪 Test my connection**
+> to see what your network supports; if a join fails, putting one player on a phone
+> hotspot usually works. [Reports welcome](https://github.com/coutLiKe/meowjong/issues).
 
 ## Learning features
 

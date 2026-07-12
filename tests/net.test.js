@@ -62,15 +62,20 @@ test("peerId always uses the normalized room code", () => {
   eq(T.peerId(" nm-qv "), "meowjong-room-NMQV");
 });
 
-test("partyPeerOptions pins shared signaling and TURN candidates", () => {
+test("partyPeerOptions pins shared signaling and live ICE servers", () => {
   const opts = T.partyPeerOptions();
   eq(opts.host, "0.peerjs.com");
   eq(opts.port, 443);
   eq(opts.secure, true);
   const urls = opts.config.iceServers.flatMap(s => Array.isArray(s.urls) ? s.urls : [s.urls]);
   ok(urls.some(u => u.startsWith("stun:")), "has STUN candidates");
-  ok(urls.some(u => u.startsWith("turn:")), "has TURN candidates");
-  ok(urls.some(u => u.startsWith("turns:")), "has TLS TURN candidates");
+  // Regression guard: the PeerJS public TURN was shut down (eu-0/us-0.turn.
+  // peerjs.com are NXDOMAIN, verified 2026-07-12), and the classic free
+  // relays (openrelay.metered.ca) are dead too. Dead relay entries slow every
+  // ICE gathering and mask real failures — they must never come back.
+  notOk(urls.some(u => u.includes("turn.peerjs.com")), "no dead peerjs TURN hosts");
+  notOk(urls.some(u => u.includes("openrelay.metered.ca")), "no dead openrelay hosts");
+  ok(Array.isArray(T.PARTY_TURN_SERVERS), "pluggable TURN slot exists for a real provider");
 });
 
 /* ---------- projectFor: guest snapshot (regression: must not crash pre-deal) ---------- */
