@@ -50,6 +50,29 @@ test("sanitizeMarkup handles nullish input", () => {
   eq(T.sanitizeMarkup(undefined), "");
 });
 
+/* ---------- party code / PeerJS connection config ---------- */
+
+test("normalizePartyCode accepts pasted or lowercase room codes", () => {
+  eq(T.normalizePartyCode(" ab-c "), "ABC");
+  eq(T.normalizePartyCode("n m q v\n"), "NMQV");
+  eq(T.normalizePartyCode(null), "");
+});
+
+test("peerId always uses the normalized room code", () => {
+  eq(T.peerId(" nm-qv "), "meowjong-room-NMQV");
+});
+
+test("partyPeerOptions pins shared signaling and TURN candidates", () => {
+  const opts = T.partyPeerOptions();
+  eq(opts.host, "0.peerjs.com");
+  eq(opts.port, 443);
+  eq(opts.secure, true);
+  const urls = opts.config.iceServers.flatMap(s => Array.isArray(s.urls) ? s.urls : [s.urls]);
+  ok(urls.some(u => u.startsWith("stun:")), "has STUN candidates");
+  ok(urls.some(u => u.startsWith("turn:")), "has TURN candidates");
+  ok(urls.some(u => u.startsWith("turns:")), "has TLS TURN candidates");
+});
+
 /* ---------- projectFor: guest snapshot (regression: must not crash pre-deal) ---------- */
 
 test("projectFor is null-safe when seats aren't dealt yet (H9 regression)", () => {
