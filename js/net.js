@@ -31,23 +31,48 @@ const HB_TIMEOUT_MS = 22000;    // no traffic for this long ⇒ peer is gone
 const PROMPT_TIMEOUT_MS = 60000; // a live-but-AFK guest yields to the cat after this
 const PARTY_CONNECT_TIMEOUT_MS = 12000;
 
-/* TURN relay servers — currently NONE, deliberately. The PeerJS project's
-   public TURN (eu-0/us-0.turn.peerjs.com — still referenced by peerjs 1.5.x
-   defaults) no longer exists in DNS, and the classic free relays
-   (openrelay.metered.ca, freeturn.net) are dead too — all verified with real
-   TURN Allocate probes on 2026-07-12. Dead TURN entries aren't harmless:
-   every dead hostname adds DNS timeouts and ICE-gathering noise to every
-   single join attempt, so we list none.
+/* TURN relay servers — a relay is what bridges the "hard" networks (strict
+   NAT, VPN, cellular/CGNAT, hotel/corporate Wi-Fi) that STUN alone can't
+   traverse. Most home networks connect directly via STUN and never touch a
+   relay; the players who see "Couldn't connect to the host" are the ones who
+   need one.
 
-   Without a relay, parties connect across most home networks (direct+STUN),
-   but strict NATs, VPNs, and hotel/corporate Wi-Fi cannot be bridged. To fix
-   that, create a free account with a TURN provider (e.g. metered.ca or
-   expressturn.com), paste its servers below, and the party modal's
-   "🧪 Test my connection" will show the relay working. */
-const PARTY_TURN_SERVERS = [
-  // { urls: ["turn:relay.example.com:80", "turn:relay.example.com:443?transport=tcp"],
-  //   username: "…", credential: "…" },
-];
+   History: party mode used to rely on PeerJS's bundled free relay
+   (eu-0/us-0.turn.peerjs.com). PeerJS decommissioned it — the hostnames are
+   now NXDOMAIN — which is what broke strict-network joins. The old no-account
+   public relays (openrelay.metered.ca, etc.) are dead too, so there is no
+   longer a "free, zero-signup" relay to point at.
+
+   The fix: a Metered (metered.ca) free account. One-time signup for the *host
+   maintainer only* (players still set up nothing); the free tier is ~20 GB/mo
+   of relay traffic, which is enormous for text-sized mahjong moves. Paste the
+   two credential strings from the Metered dashboard into METERED_TURN below.
+   We list several transports so at least one gets through: UDP/TCP 80, TCP
+   443, and TLS 443 (443/TCP+TLS is what punches through locked-down
+   corporate/hotel firewalls that only allow "web" traffic).
+
+   If you'd rather never depend on someone else's free tier, run your own TURN
+   (coturn on a ~$5/mo VPS) and replace PARTY_TURN_SERVERS with its address +
+   credentials in the same {urls, username, credential} shape. */
+const METERED_TURN = {
+  // ↓↓↓ Paste from the Metered dashboard (dashboard.metered.ca → TURN Server).
+  // Leave blank to ship STUN-only (no relay); the 🧪 test will say so.
+  username: "",
+  credential: "",
+};
+
+const PARTY_TURN_SERVERS = (METERED_TURN.username && METERED_TURN.credential)
+  ? [
+      { urls: "turn:global.relay.metered.ca:80",
+        username: METERED_TURN.username, credential: METERED_TURN.credential },
+      { urls: "turn:global.relay.metered.ca:80?transport=tcp",
+        username: METERED_TURN.username, credential: METERED_TURN.credential },
+      { urls: "turn:global.relay.metered.ca:443",
+        username: METERED_TURN.username, credential: METERED_TURN.credential },
+      { urls: "turns:global.relay.metered.ca:443?transport=tcp",
+        username: METERED_TURN.username, credential: METERED_TURN.credential },
+    ]
+  : [];
 
 const PARTY_STUN_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
