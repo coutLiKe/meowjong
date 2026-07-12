@@ -29,8 +29,42 @@ const NET = {
 const HB_INTERVAL_MS = 7000;    // ping cadence
 const HB_TIMEOUT_MS = 22000;    // no traffic for this long ⇒ peer is gone
 const PROMPT_TIMEOUT_MS = 60000; // a live-but-AFK guest yields to the cat after this
+const PARTY_CONNECT_TIMEOUT_MS = 12000;
+
+const PARTY_PEER_OPTIONS = {
+  host: "0.peerjs.com",
+  port: 443,
+  path: "/",
+  key: "peerjs",
+  secure: true,
+  config: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:global.stun.twilio.com:3478" },
+      {
+        urls: [
+          "turn:eu-0.turn.peerjs.com:3478",
+          "turn:us-0.turn.peerjs.com:3478",
+          "turn:eu-0.turn.peerjs.com:3478?transport=tcp",
+          "turn:us-0.turn.peerjs.com:3478?transport=tcp",
+          "turns:eu-0.turn.peerjs.com:443?transport=tcp",
+          "turns:us-0.turn.peerjs.com:443?transport=tcp",
+        ],
+        username: "peerjs",
+        credential: "peerjsp",
+      },
+    ],
+    sdpSemantics: "unified-plan",
+    iceCandidatePoolSize: 4,
+  },
+};
+
+function partyPeerOptions() {
+  return JSON.parse(JSON.stringify(PARTY_PEER_OPTIONS));
+}
 
 function stopHeartbeat() { if (NET.hb) { clearInterval(NET.hb); NET.hb = null; } }
+function destroyPeerQuietly() { try { if (NET.peer) NET.peer.destroy(); } catch (e) {} NET.peer = null; NET.conn = null; }
 
 function startHostHeartbeat() {
   stopHeartbeat();
@@ -76,7 +110,11 @@ function randomCode() {
   return s;
 }
 
-function peerId(code) { return "meowjong-room-" + code.toUpperCase(); }
+function normalizePartyCode(raw) {
+  return String(raw == null ? "" : raw).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+}
+
+function peerId(code) { return "meowjong-room-" + normalizePartyCode(code); }
 
 /* ---------- Party modal (host or join) ---------- */
 
@@ -107,7 +145,7 @@ function netOpenPartyModal() {
     [{ label: "Cancel", cls: "secondary", cb: hideModal }]);
   $("#party-host-btn").addEventListener("click", () => startHosting());
   $("#party-join-btn").addEventListener("click", () => {
-    const code = ($("#party-code").value || "").trim().toUpperCase();
+    const code = normalizePartyCode($("#party-code").value);
     if (code.length !== 4) { $("#party-status").textContent = "Enter the 4-letter room code."; return; }
     startJoining(code);
   });
@@ -150,10 +188,11 @@ function ensurePeerLib() {
 
 async function startHosting() {
   if (!(await ensurePeerLib())) { partyStatus("Couldn't load the multiplayer library — check your connection and try again."); return; }
+  destroyPeerQuietly();
   NET.myName = getPartyName();
   NET.code = randomCode();
   partyStatus("Setting up the room…");
-  NET.peer = new Peer(peerId(NET.code));
+  NET.peer = new Peer(peerId(NET.code), partyPeerOptions());
   NET.peer.on("open", () => {
     NET.role = "host";
     startHostHeartbeat();
@@ -162,6 +201,12 @@ async function startHosting() {
   NET.peer.on("error", err => {
     if (err.type === "unavailable-id") { NET.code = randomCode(); NET.peer.destroy(); startHosting(); return; }
     partyStatus("Connection problem: " + err.type + ". Check your internet and try again.");
+  });
+  // The signaling socket can drop silently (laptop sleep, a wifi blip). Without
+  // it the room code stops being joinable even though the lobby looks fine — so
+  // reconnect automatically; PeerJS restores the same room id.
+  NET.peer.on("disconnected", () => {
+    if (NET.peer && !NET.peer.destroyed) { try { NET.peer.reconnect(); } catch (e) {} }
   });
   NET.peer.on("connection", conn => {
     conn.on("data", d => hostOnData(conn, d));
@@ -401,15 +446,34 @@ function netCloseModals() {
 
 async function startJoining(code) {
   if (!(await ensurePeerLib())) { partyStatus("Couldn't load the multiplayer library — check your connection and try again."); return; }
+  destroyPeerQuietly();
   NET.myName = getPartyName();
+  code = normalizePartyCode(code);
+  if (code.length !== 4) { partyStatus("Enter the 4-letter room code."); return; }
   partyStatus("Connecting to room " + code + "…");
-  NET.peer = new Peer();
-  NET.peer.on("error", err => partyStatus("Couldn't reach the room (" + err.type + "). Check the code and your internet."));
+  NET.peer = new Peer(partyPeerOptions());
+  // Typed failure messages, so "can't connect" tells you WHICH link is broken:
+  // the room lookup (code/host problem) vs. the network path (NAT/firewall).
+  NET.peer.on("error", err => {
+    const t = (err && err.type) || "unknown";
+    if (t === "peer-unavailable") {
+      partyStatus("Room " + code + " wasn't found — double-check the 4-letter code, and make sure the host still has the lobby open (if their laptop slept, ask them to re-host).");
+    } else if (t === "network") {
+      partyStatus("Couldn't reach the connection service — check your internet and try again.");
+    } else {
+      partyStatus("Couldn't reach the room (" + t + "). Check the code and your internet.");
+    }
+  });
+  NET.peer.on("disconnected", () => {
+    if (NET.peer && !NET.peer.destroyed) { try { NET.peer.reconnect(); } catch (e) {} }
+  });
   NET.peer.on("open", () => {
     const conn = NET.peer.connect(peerId(code), { reliable: true });
     NET.conn = conn;
     let opened = false;
+    let timedOut = false;
     conn.on("open", () => {
+      if (timedOut) return;
       opened = true;
       conn.send({ t: "hello", name: NET.myName });
       partyStatus("Connected! Waiting in the lobby — the host starts the match.");
@@ -419,10 +483,17 @@ async function startJoining(code) {
     });
     conn.on("data", d => guestOnData(d));
     conn.on("close", () => {
+      if (timedOut) return;
       if (opened && NET.role === "guest") netShutdown("Lost the connection to the host.");
       else partyStatus("The room closed the connection.");
     });
-    setTimeout(() => { if (!opened) partyStatus("No answer from room " + code + " — is the host online and the code right?"); }, 8000);
+    setTimeout(() => {
+      if (opened) return;
+      timedOut = true;
+      try { conn.close(); } catch (e) {}
+      if (NET.role !== "guest") destroyPeerQuietly();
+      partyStatus("Couldn't connect to the host. The room code exists, but WebRTC couldn't make a route between you two — ask the host to keep the lobby open and try again, or have one player switch off VPN/corporate Wi‑Fi.");
+    }, PARTY_CONNECT_TIMEOUT_MS);
   });
 }
 
@@ -541,8 +612,8 @@ function netShutdown(reason) {
   // the player is still reading the message).
   stopHeartbeat();
   try { for (const k in NET.pending) { const r = NET.pending[k]; delete NET.pending[k]; r({ type: "auto" }); } } catch (e) {}
-  try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
-  NET.role = null; NET.started = false; NET.peer = null; NET.conn = null;
+  destroyPeerQuietly();
+  NET.role = null; NET.started = false;
   NET.guests = []; NET.pending = {}; NET.code = null;
   showModal(`<h2>🎉 Party over</h2><p>${escapeHtml(reason)}</p><p>Reload to return to single-player vs the café cats.</p>`,
     [{ label: "Back to single-player", cls: "primary", cb: () => location.reload() }]);
