@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meowjong — Learn &amp; Play FJ Mahjong</title>
   <!-- Launch prep: search + social-share metadata -->
-  <meta name="description" content="Learn and play FJ (Fujian) mahjong free in your browser — a 3D table, café-cat opponents, a built-in coach that teaches as you play, and online party mode (beta)." />
+  <meta name="description" content="Learn and play FJ (Fujian) mahjong free in your browser — a 3D table, café-cat opponents, a built-in coach that teaches as you play, and online party mode." />
   <meta name="theme-color" content="#4a3426" />
   <link rel="canonical" href="https://coutlike.github.io/meowjong/" />
   <meta property="og:type" content="website" />
@@ -19,7 +19,7 @@
   <meta name="twitter:title" content="Meowjong — Learn &amp; Play Fujian Mahjong" />
   <meta name="twitter:description" content="Authentic 4-player FJ mahjong with café-cat opponents and a coach that teaches you as you play. Free, no install, right in your browser." />
   <meta name="twitter:image" content="https://coutlike.github.io/meowjong/assets/og-image.png" />
-  <link rel="stylesheet" href="css/style.css?v=p23" />
+  <link rel="stylesheet" href="css/style.css?v=p24" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 72'%3E%3Crect x='3' y='3' width='58' height='66' rx='12' fill='%23fffdf4' stroke='%23c9b993' stroke-width='4'/%3E%3Cpath d='M6 52 h52 v8 a10 10 0 0 1 -10 10 h-32 a10 10 0 0 1 -10 -10 z' fill='%237fa877'/%3E%3Ccircle cx='32' cy='31' r='16' fill='none' stroke='%231e7a3c' stroke-width='5'/%3E%3Ccircle cx='32' cy='31' r='8.5' fill='none' stroke='%23b3232a' stroke-width='5'/%3E%3Ccircle cx='32' cy='31' r='3' fill='%23b3232a'/%3E%3C/svg%3E" />
 </head>
 <body>
@@ -67,7 +67,7 @@
           </label>
         </div>
       </details>
-      <button id="btn-party" title="Online multiplayer is in beta — please report hiccups!"><span class="ico" data-icon="users"></span>Party<span class="beta-chip">beta</span></button>
+      <button id="btn-party" title="Play online with friends using a room code"><span class="ico" data-icon="users"></span>Party</button>
       <button id="btn-newhand"><span class="ico" data-icon="refresh"></span>Re-deal</button>
       <button id="btn-menu"><span class="ico" data-icon="home"></span>Menu</button>
     </div>
@@ -182,7 +182,7 @@
     <div class="menu-buttons">
       <button class="menu-btn hidden" id="menu-resume"><span class="mb-head"><span class="ico" data-icon="refresh"></span>Resume match</span><span id="menu-resume-sub"></span></button>
       <button class="menu-btn primary" id="menu-solo"><span class="mb-head"><span class="ico" data-icon="play"></span>Single Player</span><span>vs. three café cats — coach included</span></button>
-      <button class="menu-btn" id="menu-party"><span class="mb-head"><span class="ico" data-icon="users"></span>Party Mode<span class="beta-chip">beta</span></span><span>host or join with a room code — multiplayer is in beta</span></button>
+      <button class="menu-btn" id="menu-party"><span class="mb-head"><span class="ico" data-icon="users"></span>Party Mode</span><span>host or join a game with a room code</span></button>
       <button class="menu-btn" id="menu-tutorial"><span class="mb-head"><span class="ico" data-icon="book-open"></span>Tutorial</span><span>learn FJ mahjong from zero</span></button>
       <button class="menu-btn" id="menu-strategy"><span class="mb-head"><span class="ico" data-icon="target"></span>Strategy School</span><span>waits, golds, flowers &amp; defense</span></button>
     </div>
@@ -200,18 +200,18 @@
 
   <!-- PeerJS is vendored (js/vendor/peerjs.min.js) and lazy-loaded on first Party use,
        so the boot path never depends on the network. -->
-  <script src="js/icons.js?v=p23"></script>
-  <script src="js/tiles.js?v=p23"></script>
-  <script src="js/faces.js?v=p23"></script>
-  <script src="js/engine.js?v=p23"></script>
-  <script src="js/ai.js?v=p23"></script>
-  <script src="js/net.js?v=p23"></script>
-  <script src="js/ui.js?v=p23"></script>
-  <script src="js/analyst.js?v=p23"></script>
-  <script src="js/tutorial.js?v=p23"></script>
-  <script src="js/fx.js?v=p23"></script>
-  <script src="js/emotes.js?v=p23"></script>
-  <script src="js/sound.js?v=p23"></script>
-  <script src="js/main.js?v=p23"></script>
+  <script src="js/icons.js?v=p24"></script>
+  <script src="js/tiles.js?v=p24"></script>
+  <script src="js/faces.js?v=p24"></script>
+  <script src="js/engine.js?v=p24"></script>
+  <script src="js/ai.js?v=p24"></script>
+  <script src="js/net.js?v=p24"></script>
+  <script src="js/ui.js?v=p24"></script>
+  <script src="js/analyst.js?v=p24"></script>
+  <script src="js/tutorial.js?v=p24"></script>
+  <script src="js/fx.js?v=p24"></script>
+  <script src="js/emotes.js?v=p24"></script>
+  <script src="js/sound.js?v=p24"></script>
+  <script src="js/main.js?v=p24"></script>
 </body>
 </html>

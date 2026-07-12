@@ -1234,18 +1234,6 @@ body.fx-depth #wall-row .tile.mini { width: 18px; height: 26px; font-size: 8px; 
 }
 .menu-link:hover { color: #fff; }
 
-/* launch prep: small "beta" tag on the Party buttons */
-.beta-chip {
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: #ffd65a;
-  color: #4a3426;
-  border-radius: 7px;
-  padding: 1px 5px;
-  margin-left: 6px;
-}
 .party-trust {
   background: #fdf3dd;
   border-left: 4px solid var(--accent);

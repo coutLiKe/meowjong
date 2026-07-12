@@ -44,17 +44,19 @@ Tests: `node tests/run.js` (or `npm test`).
 - Chi only from the previous player; peng/gang from anyone; concealed/added gangs with
   back-wall replacement draws.
 
-## Party mode 🎉 (beta)
+## Party mode 🎉
 
 Real 4-player mahjong over the internet, no server to set up: host gets a 4-letter room
 code, up to 3 friends join with it, AI cats fill empty seats and take over on disconnect.
 Everyone sees the table from their own seat (flower rows and the gold are public).
 
-> Multiplayer is peer-to-peer and currently **beta** — it connects directly between
-> players (no relay server), which works on most home networks but **not** across
-> strict NATs, VPNs, or hotel/corporate Wi-Fi. Use **🎉 Party → 🧪 Test my connection**
-> to see what your network supports; if a join fails, putting one player on a phone
-> hotspot usually works. [Reports welcome](https://github.com/coutLiKe/meowjong/issues).
+> Multiplayer is peer-to-peer: it connects players directly when it can, and falls back
+> to a free public relay for strict NATs, VPNs, and hotel/corporate Wi-Fi that can't be
+> traversed directly. Public relays are shared and best-effort — if a join fails, use
+> **🎉 Party → 🧪 Test my connection** to see which layer is the problem, and putting one
+> player on a phone hotspot usually works. For a bulletproof, always-available relay you
+> can run your own TURN server (see `PARTY_TURN_SERVERS` in `js/net.js`).
+> [Reports welcome](https://github.com/coutLiKe/meowjong/issues).
 
 ## Learning features
 
