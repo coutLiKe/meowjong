@@ -6,7 +6,7 @@
 
 A beginner-friendly implementation of **FJ (Fujian/Fuzhou) style 4-player mahjong** — the
 fast, gold-rush variant — with a 3D table, café-cat opponents, a built-in teacher
-(**Professor Paws** 🎓), synthesized sound, and an online **party mode (beta)** for playing
+(**Professor Paws** 🎓), synthesized sound, and an online **party mode** for playing
 with friends. This is the only variant implemented.
 
 ## Highlights
