@@ -844,7 +844,6 @@ h1 .brand-slot svg { width: 26px; height: 29px; }
   --ease-back: cubic-bezier(.34, 1.56, .64, 1);
   --fx-base: .22s; --fx-slow: .42s;
 }
-#table { position: relative; }
 
 /* ---------- M2 · living tiles ---------- */
 body.fx-motion .tile.clickable { transition: transform var(--fx-base) var(--ease-out-soft), box-shadow var(--fx-base) ease; }
