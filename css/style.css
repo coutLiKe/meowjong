@@ -13,12 +13,7 @@
   --tile-face: #fffdf7;
   --tile-edge: #d9c8a9;
   --yarn: #4a7fb5;
-  --fish: #2e8b7a;
-  --paw: #c96b3d;
-  --wind: #6b5ea8;
   --d-red: #c0392b;
-  --d-green: #27ae60;
-  --d-white: #8a97a5;
   --good: #2e7d32;
   --bad: #c62828;
 }
@@ -847,7 +842,7 @@ h1 .brand-slot svg { width: 26px; height: 29px; }
 :root {
   --ease-out-soft: cubic-bezier(.22, .61, .36, 1);
   --ease-back: cubic-bezier(.34, 1.56, .64, 1);
-  --fx-fast: .12s; --fx-base: .22s; --fx-slow: .42s;
+  --fx-base: .22s; --fx-slow: .42s;
 }
 #table { position: relative; }
 
