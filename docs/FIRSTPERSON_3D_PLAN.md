@@ -1,7 +1,7 @@
 # Meowjong — First-Person 3D Mode: Phase Plan
 
-**DRAFT — post-P6 refinement pass 5 (2026-07-20), per review: NOT yet
-committed.** Pass-5 changes, all verified live:
+**SHIPPED — post-P6 refinement pass 5, committed and merged to main
+(2026-07-20).** Pass-5 changes, all verified live:
 - **Public row rewritten again** (review: pass 4's fix "didn't take" — still
   overlapping, plus a tile floating disconnected near the corner). Root
   cause: both pass-3 and pass-4 anchored the row in the strip OUTSIDE the

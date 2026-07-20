@@ -1,8 +1,10 @@
 # Meowjong — Tile Randomization & AI Fairness Review
 
-**Status: draft / findings for review. The §5 fairness test harness has been committed
-(`tests/fairness.test.js`, commit d8cc8c4); the §6 AI/difficulty proposals below remain
-unimplemented, awaiting direction.**
+**Status: findings confirmed and acted on. The §5 fairness test harness has been committed
+(`tests/fairness.test.js`, commit d8cc8c4); the §6 AI/difficulty open question was answered
+by `docs/GAMEPLAY_NEXT_LEVEL_PLAN.md`'s G1 milestone (unified strong AI, shipped 2026-07-17),
+which replaced the flat heuristic with the danger-aware, Analyst-EV-driven engine proposed
+below — no difficulty tiers, one strength for every cat, per that plan's direction.**
 **Headline: the shuffle and deal are fair. The "strong hands" feeling is real but its cause is perception and assistance asymmetry, not a biased wall.**
 
 I read the actual generation, shuffle, and deal code, then *proved* the conclusion with a 200,000-deal Monte Carlo simulation that runs the game's **own** `buildWall`, deal, flower-replacement, gold-flip, and `roughShanten` scorer. No assumptions.
