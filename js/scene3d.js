@@ -61,7 +61,7 @@ const SCENE3D = {
   on: false, ready: false, failed: false,
   renderer: null, scene: null, camera: null, canvas: null,
   hand: [], oppRacks: [[], [], []], river: [], wall: [], publicTiles: [], dust: [],
-  goldMesh: null, turnDisc: null, lamp: null,
+  goldMesh: null, goldRing: null, turnDisc: null, lamp: null,
   faceMats: new Map(), tweens: [],
   hintTiles: [],   // this sync's hand meshes matching the coach's suggested discard kind
   dragging: null, hovered: null, lastDrop: null,
@@ -301,6 +301,17 @@ function s3Build() {
   ring.visible = false;
   scene.add(ring);
   SCENE3D.discardRing = ring;
+
+  // gold marker: same idea, under the flipped wild tile — a ring, not a tint
+  // on the face itself, so the printed pips/characters stay fully legible
+  // (an emissive tint on the face previously washed out the ink)
+  const goldRing = new T.Mesh(new T.RingGeometry(0.0295, 0.0365, 32),
+    new T.MeshBasicMaterial({ color: 0xffd65a, transparent: true, opacity: 0.5,
+      side: T.DoubleSide, depthWrite: false }));
+  goldRing.rotation.x = -Math.PI / 2;
+  goldRing.visible = false;
+  scene.add(goldRing);
+  SCENE3D.goldRing = goldRing;
 
   s3PrewarmFaceTextures();
   s3BuildPortraits();
@@ -969,18 +980,24 @@ function scene3dSync() {
   }
 
   // GOLD — the flipped wild lies FACE-UP just inside the wall break the ceremony
-  // chose (the authentic spot), softly glowing so it never gets lost
+  // chose (the authentic spot). A ring under it (not a tint on the face itself)
+  // marks it so it never gets lost among the wall tiles — an emissive tint on
+  // the face previously washed out the printed pips/characters, making the
+  // one tile you most need to read at a glance the hardest one to read.
   if (SCENE3D.goldMesh) { SCENE3D.scene.remove(SCENE3D.goldMesh); SCENE3D.goldMesh = null; }
   if (P.wildFlip != null) {
     const m = s3MakeTile(P.wildFlip);
-    m.material = m.material.slice();
-    m.material[4] = m.material[4].clone();
-    m.material[4].emissive = new THREE.Color(0x3a2a00);
     const g = s3GoldSpot();
     m.position.set(g[0], S3_FELT_Y + S3_TILE_T / 2, g[1]);
     m.rotation.set(-Math.PI / 2, 0, 0.10);
     SCENE3D.scene.add(m);
     SCENE3D.goldMesh = m;
+    if (SCENE3D.goldRing) {
+      SCENE3D.goldRing.position.set(g[0], S3_FELT_Y + 0.0035, g[1]);
+      SCENE3D.goldRing.visible = true;
+    }
+  } else if (SCENE3D.goldRing) {
+    SCENE3D.goldRing.visible = false;
   }
 
   // keep the DOM action bar correctly pinned even if no animation frame has
@@ -1157,12 +1174,16 @@ function s3Loop(now) {
     if (SCENE3D.discardRing && SCENE3D.discardRing.visible) {
       SCENE3D.discardRing.material.opacity = 0.34 + 0.20 * (0.5 + 0.5 * Math.sin(t * 3.2));
     }
+    if (SCENE3D.goldRing && SCENE3D.goldRing.visible) {
+      SCENE3D.goldRing.material.opacity = 0.34 + 0.20 * (0.5 + 0.5 * Math.sin(t * 3.2));
+    }
     // the coach's suggested-discard tile(s) pulse too, mirroring the 2D
     // board's fx-wiggle on .tile.suggest — same "look here" intent
     for (const m of SCENE3D.hintTiles) m.material[4].emissiveIntensity = 0.4 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3.2));
   } else {
     if (SCENE3D.lamp) SCENE3D.lamp.intensity = SCENE3D.lampBase;
     if (SCENE3D.discardRing) SCENE3D.discardRing.material.opacity = 0.45;
+    if (SCENE3D.goldRing) SCENE3D.goldRing.material.opacity = 0.45;
     for (const m of SCENE3D.hintTiles) m.material[4].emissiveIntensity = 0.55;
   }
   SCENE3D.renderer.render(SCENE3D.scene, SCENE3D.camera);
