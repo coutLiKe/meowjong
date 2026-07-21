@@ -1629,7 +1629,11 @@ body.fx-motion #emote-wheel { animation: emw-in .18s var(--ease-back) both; }
 #scene3d-canvas { display: none; position: fixed; inset: 0; z-index: 1; }
 body.mode3d #scene3d-canvas { display: block; }
 body.mode3d #table, body.mode3d #hand, body.mode3d #your-melds { display: none; }
-body.mode3d #log-wrap { display: none; }             /* beta: the coach still narrates */
+body.mode3d #log-wrap { display: none; }             /* the coach still narrates */
+/* corner labels are drawn on the classic board's DOM tiles only — nothing
+   for the 3D table's canvas-texture tiles to label, so the setting has no
+   effect there; hide it rather than leave a dead control in the popover */
+body.mode3d #row-labels { display: none; }
 /* perspective:none matters: the classic board's CSS-3D perspective on #layout
    would otherwise become the containing block for our fixed-position dock,
    pinning "bottom: 10px" to the collapsed layout box instead of the viewport */

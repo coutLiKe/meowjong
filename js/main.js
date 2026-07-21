@@ -17,7 +17,7 @@ const G = {
     { name: "Captain Whiskers", emoji: "🐯", control: "ai" },
   ],
   wall: [], river: [], dealer: 0, activeSeat: null, lastDiscard: null,
-  handNumber: 1, gen: 0, peek: false, autoCoach: true,
+  handNumber: 1, gen: 0, autoCoach: true,
   awaitingDiscard: false, selectedIdx: null, suggestKind: null,
   turnCtx: null, choiceSink: null,
   wildKind: null,    // the wild (gold) kind this hand
@@ -1180,7 +1180,6 @@ window.addEventListener("DOMContentLoaded", () => {
   if (hudSettings) document.addEventListener("click", e => {
     if (hudSettings.open && !hudSettings.contains(e.target)) hudSettings.open = false;
   });
-  $("#toggle-peek").addEventListener("change", e => { G.peek = e.target.checked; renderAll(); });
   $("#toggle-labels").addEventListener("change", e => {
     document.body.classList.toggle("hide-corners", !e.target.checked);
   });

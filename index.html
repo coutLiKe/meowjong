@@ -19,12 +19,12 @@
   <meta name="twitter:title" content="Meowjong — Learn &amp; Play Fujian Mahjong" />
   <meta name="twitter:description" content="Authentic 4-player FJ mahjong with café-cat opponents and a coach that teaches you as you play. Free, no install, right in your browser." />
   <meta name="twitter:image" content="https://coutlike.github.io/meowjong/assets/og-image.png" />
-  <link rel="stylesheet" href="css/style.css?v=p59" />
+  <link rel="stylesheet" href="css/style.css?v=p61" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 72'%3E%3Crect x='3' y='3' width='58' height='66' rx='12' fill='%23fffdf4' stroke='%23c9b993' stroke-width='4'/%3E%3Cpath d='M6 52 h52 v8 a10 10 0 0 1 -10 10 h-32 a10 10 0 0 1 -10 -10 z' fill='%237fa877'/%3E%3Ccircle cx='32' cy='31' r='16' fill='none' stroke='%231e7a3c' stroke-width='5'/%3E%3Ccircle cx='32' cy='31' r='8.5' fill='none' stroke='%23b3232a' stroke-width='5'/%3E%3Ccircle cx='32' cy='31' r='3' fill='%23b3232a'/%3E%3C/svg%3E" />
 </head>
 <body>
   <!-- M6/M7.1 · Top HUD bar, decluttered: brand · round/wall status · learn tabs ·
-       an ⚙ Options popover (peek/labels/coach/fx · 3D table) · party/re-deal/menu -->
+       an ⚙ Options popover (labels/coach/fx · 3D table) · party/re-deal/menu -->
   <header id="hud">
     <div class="hud-brand">
       <h1><span class="brand-slot brand-sm"></span> Meowjong</h1>
@@ -44,19 +44,16 @@
       <details id="hud-settings">
         <summary title="Learning &amp; visual options"><span class="ico" data-icon="sliders"></span>Options</summary>
         <div class="hud-pop">
-          <label class="toggle" title="Show the cats' hands face-up while you learn (single-player only)">
-            <input type="checkbox" id="toggle-peek" /> <span class="ico" data-icon="eye"></span>Peek at cats' hands
-          </label>
-          <label class="toggle" title="Small corner numbers/letters on every tile while you learn to read the faces">
+          <label class="toggle" id="row-labels" title="Small corner numbers/letters on every tile while you learn to read the faces (classic board only)">
             <input type="checkbox" id="toggle-labels" checked /> <span class="ico" data-icon="type"></span>Tile corner labels
           </label>
           <label class="toggle" title="Professor Paws comments automatically as you play">
             <input type="checkbox" id="toggle-coach" checked /> <span class="ico" data-icon="graduation-cap"></span>Auto coach
           </label>
-          <label class="toggle" title="Visual effects: Full 3D table + motion, Subtle motion only, or Off">
+          <label class="toggle" title="Motion &amp; animation intensity — Full motion, Subtle, or Off. Separate from the 3D table view below; also governs prefers-reduced-motion.">
             <span class="ico" data-icon="eye"></span>Effects
             <select id="fx-level" aria-label="Visual effects level">
-              <option value="full">Full 3D</option>
+              <option value="full">Full motion</option>
               <option value="subtle">Subtle</option>
               <option value="off">Off</option>
             </select>
@@ -210,21 +207,21 @@
 
   <!-- PeerJS is vendored (js/vendor/peerjs.min.js) and lazy-loaded on first Party use,
        so the boot path never depends on the network. -->
-  <script src="js/icons.js?v=p59"></script>
-  <script src="js/tiles.js?v=p59"></script>
-  <script src="js/faces.js?v=p59"></script>
-  <script src="js/engine.js?v=p59"></script>
-  <script src="js/ai.js?v=p59"></script>
-  <script src="js/net.js?v=p59"></script>
-  <script src="js/ui.js?v=p59"></script>
-  <script src="js/analyst.js?v=p59"></script>
-  <script src="js/stats.js?v=p59"></script>
-  <script src="js/scene3d.js?v=p59"></script>
-  <script src="js/achievements.js?v=p59"></script>
-  <script src="js/tutorial.js?v=p59"></script>
-  <script src="js/fx.js?v=p59"></script>
-  <script src="js/emotes.js?v=p59"></script>
-  <script src="js/sound.js?v=p59"></script>
-  <script src="js/main.js?v=p59"></script>
+  <script src="js/icons.js?v=p61"></script>
+  <script src="js/tiles.js?v=p61"></script>
+  <script src="js/faces.js?v=p61"></script>
+  <script src="js/engine.js?v=p61"></script>
+  <script src="js/ai.js?v=p61"></script>
+  <script src="js/net.js?v=p61"></script>
+  <script src="js/ui.js?v=p61"></script>
+  <script src="js/analyst.js?v=p61"></script>
+  <script src="js/stats.js?v=p61"></script>
+  <script src="js/scene3d.js?v=p61"></script>
+  <script src="js/achievements.js?v=p61"></script>
+  <script src="js/tutorial.js?v=p61"></script>
+  <script src="js/fx.js?v=p61"></script>
+  <script src="js/emotes.js?v=p61"></script>
+  <script src="js/sound.js?v=p61"></script>
+  <script src="js/main.js?v=p61"></script>
 </body>
 </html>

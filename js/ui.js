@@ -125,15 +125,11 @@ function renderOpponents() {
     panel.classList.toggle("active-turn", G.activeSeat === i);
     const handRow = panel.querySelector(".opp-hand");
     handRow.innerHTML = "";
-    if (G.peek && !isPartyMode()) {
-      for (const t of sortHand(s.hand.slice())) handRow.appendChild(tileEl(t, { small: true }));
-    } else {
-      for (const t of s.hand) handRow.appendChild(tileEl(null, { mini: true }));
-      const n = document.createElement("span");
-      n.className = "hand-count";
-      n.textContent = s.hand.length + " tiles";
-      handRow.appendChild(n);
-    }
+    for (const t of s.hand) handRow.appendChild(tileEl(null, { mini: true }));
+    const n = document.createElement("span");
+    n.className = "hand-count";
+    n.textContent = s.hand.length + " tiles";
+    handRow.appendChild(n);
     const meldRow = panel.querySelector(".opp-melds");
     meldRow.innerHTML = "";
     for (const m of s.melds) meldRow.appendChild(meldEl(m));

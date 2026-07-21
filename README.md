@@ -13,7 +13,7 @@ with friends. This is the only variant implemented.
 
 - **A real table, not a webpage** — perspective-tilted felt, tiles with physical thickness,
   a depleting wall, tile flights and claim slams, an animated win ceremony, and expressive
-  cats. All effects are optional (Full 3D / Subtle / Off) and respect `prefers-reduced-motion`.
+  cats. All effects are optional (Full motion / Subtle / Off) and respect `prefers-reduced-motion`.
 - **Learns you into the game** — an interactive tutorial, a Strategy School, and a coach
   whose advice runs on exact efficiency math (shanten + tile acceptance).
 - **Accessible** — fully keyboard-playable hand, labelled tiles, live-region narration.
@@ -65,7 +65,7 @@ board? Turn ⚙ Options → **3D table** off.
   realistic seated range that a scripted sweep across its entire reachable
   envelope confirms can never face a hidden tile. See `docs/FIRSTPERSON_3D_PLAN.md`
   for the full verification trail.
-- Respects the same Full 3D / Subtle / Off effects setting and
+- Respects the same Full motion / Subtle / Off effects setting and
   `prefers-reduced-motion` as the classic board — camera moves and tile
   placements go instant, nothing keeps animating, when motion is reduced.
 
@@ -100,8 +100,8 @@ Everyone sees the table from their own seat (flower rows and the gold are public
   read one engine, they never disagree. Design doc: `docs/STRATEGY_ASSISTANT.md`
 - **🏆 Winning-path view** — every win is shown grouped into its four sets + pair, so you
   see *why* the hand wins
-- **👀 Peek mode** — see the AI cats' hands while you learn (single-player only)
 - **🔤 Labels toggle** — corner numbers/letters on tiles while you learn to read the faces
+  (classic board only)
 - **📜 Game log** — every action narrated in plain English
 
 ## Feedback

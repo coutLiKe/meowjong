@@ -781,7 +781,6 @@ function guestApplySnapshot(snap) {
   G.wildKind = snap.wildKind;
   G.wildFlip = snap.wildFlip;
   G.deadFlips = snap.deadFlips || [];
-  G.peek = false;
   renderOpponents();
   renderRiver();
   renderStatus();
@@ -829,9 +828,6 @@ function guestHandlePrompt(p) {
 
 function applyPartyChrome() {
   $("#btn-party").innerHTML = `<span class="ico">${icon("users")}</span>Room ${NET.code}`;
-  $("#toggle-peek").checked = false;
-  G.peek = false;
-  $("#toggle-peek").closest("label").style.display = "none"; // fairness: no peeking at humans
   $("#btn-menu").style.display = "none"; // leaving mid-party = closing the page
   if (NET.role === "guest") $("#btn-newhand").style.display = "none";
 }
