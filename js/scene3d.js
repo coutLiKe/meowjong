@@ -592,9 +592,20 @@ function s3InitInput() {
 function s3SetHover(mesh) {
   const h = SCENE3D.hovered;
   if (h === mesh) return;
-  if (h && h.userData.homePos) { h.position.y = h.userData.homePos.y; h.material[4].emissive && h.material[4].emissive.setHex(0x000000); }
+  // A hint-highlighted tile owns its own material[4].emissive (see addHandTile
+  // / s3Loop's pulse) — leave the color channel alone for it in both branches
+  // below, or hovering it would stomp the hint gold with the pickup tint, and
+  // un-hovering would zero it out for good (the pulse loop only ever touches
+  // emissiveIntensity, never restores the color hover just overwrote).
+  if (h && h.userData.homePos) {
+    h.position.y = h.userData.homePos.y;
+    if (h.material[4].emissive && !SCENE3D.hintTiles.includes(h)) h.material[4].emissive.setHex(0x000000);
+  }
   SCENE3D.hovered = mesh;
-  if (mesh) { mesh.position.y = mesh.userData.homePos.y + 0.008; mesh.material[4].emissive.setHex(0x2a1c00); }
+  if (mesh) {
+    mesh.position.y = mesh.userData.homePos.y + 0.008;
+    if (!SCENE3D.hintTiles.includes(mesh)) mesh.material[4].emissive.setHex(0x2a1c00);
+  }
   SCENE3D.canvas.style.cursor = mesh ? "grab" : "";
 }
 
