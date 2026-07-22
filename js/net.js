@@ -843,7 +843,7 @@ function netShutdown(reason) {
   NET.role = null; NET.started = false;
   NET.guests = []; NET.spectators = []; NET.pending = {}; NET.code = null;
   showModal(`<h2>🎉 Party over</h2><p>${escapeHtml(reason)}</p><p>Reload to return to single-player vs the café cats.</p>`,
-    [{ label: "Back to single-player", cls: "primary", cb: () => location.reload() }]);
+    [{ label: "Back to single-player", cls: "primary", cb: () => location.reload() }], false);
 }
 
 function escapeHtml(s) {

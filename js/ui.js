@@ -434,7 +434,7 @@ function log(msg, cls = "", localOnly = false) {
 
 /* ---------- Modal ---------- */
 
-function showModal(html, buttons = []) {
+function showModal(html, buttons = [], dismissible = true) {
   if (typeof emoteWheelClose === "function") emoteWheelClose();
   $("#modal-content").innerHTML = html;
   const bar = $("#modal-buttons");
@@ -446,7 +446,13 @@ function showModal(html, buttons = []) {
     btn.addEventListener("click", b.cb);
     bar.appendChild(btn);
   }
-  $("#modal-overlay").classList.remove("hidden");
+  const overlay = $("#modal-overlay");
+  // dismissible=false marks a modal whose buttons are the ONLY way forward
+  // (end-of-hand, match standings, hand recap, fatal-error recovery) — the
+  // background-click-to-close handler below checks this before hiding, so a
+  // stray click can't strand the player with no visible way to continue.
+  overlay.classList.toggle("modal-locked", !dismissible);
+  overlay.classList.remove("hidden");
 }
 function hideModal() { $("#modal-overlay").classList.add("hidden"); }
 
@@ -502,7 +508,7 @@ function endModalHtml(d) {
    point shared by the host (doWin) and party guests (net.js), so both get
    the same reveal; with motion off the modal just appears complete. */
 function showEndModal(html, buttons) {
-  showModal(html, buttons);
+  showModal(html, buttons, false);   // the only way to reach Next hand — see showModal's comment
   if (typeof fxWinSequence === "function") fxWinSequence($("#modal"));
 }
 

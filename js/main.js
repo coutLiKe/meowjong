@@ -155,7 +155,7 @@ function showStandings() {
     { label: "Keep playing", cls: "secondary", cb: () => { G.matchTarget = target + MATCH_HANDS; saveMatch(); hideModal(); startHand(); } },
   ];
   if (!party) actions.push({ label: "Main menu", cls: "secondary", cb: () => { hideModal(); gotoMenu(); } });
-  showModal(standingsHtml(data), actions);
+  showModal(standingsHtml(data), actions, false);   // the only way to continue past match-end
   if (party && typeof netBroadcastStandings === "function") netBroadcastStandings(seat => standingsData(seat));
   if (typeof achRecordMatchEnd === "function") achRecordMatchEnd(data.ranked[0] && data.ranked[0].seat === 0);
 }
@@ -169,7 +169,7 @@ function showHandRecap(onClose) {
   const entries = G.myDiscardLog || [];
   if (!entries.length) {
     showModal(`<h2>📜 Hand recap</h2><p>You didn't get a discard in this hand (instant win, or the hand ended before your turn).</p>`,
-      [{ label: "Back", cls: "primary", cb: back }]);
+      [{ label: "Back", cls: "primary", cb: back }], false);
     return;
   }
   const rows = entries.map((e, i) => {
@@ -177,7 +177,7 @@ function showHandRecap(onClose) {
     return `<li>Turn ${i + 1}: discarded <b>${tileShort(e.kind)}</b> — ${e.before} → ${e.after} step${e.after === 1 ? "" : "s"} from ready <span class="log-dim">(${trend})</span></li>`;
   }).join("");
   showModal(`<h2>📜 Hand recap</h2><p>Your discards this hand, and how each changed your distance to ready:</p><ol class="standings">${rows}</ol>`,
-    [{ label: "Back", cls: "primary", cb: back }]);
+    [{ label: "Back", cls: "primary", cb: back }], false);
 }
 
 /* ---------- Fatal-error recovery ---------- */
@@ -189,15 +189,18 @@ function reportFatal(err) {
   G._fatalShown = true;
   const clear = () => { G._fatalShown = false; hideModal(); };
   if (typeof NET !== "undefined" && NET.role === "guest") {
+    // dismissible=false: an accidental background click here would otherwise
+    // leave G._fatalShown stuck true (nothing else ever resets it), silently
+    // disabling error recovery for the rest of the session
     showModal("<h2>Something went wrong</h2><p>The game hit an unexpected error. Reload to rejoin the room.</p>",
-      [{ label: "Reload", cls: "primary", cb: () => location.reload() }]);
+      [{ label: "Reload", cls: "primary", cb: () => location.reload() }], false);
     return;
   }
   showModal("<h2>Something went wrong</h2><p>The game hit an unexpected error and recovered. Your match scores are kept; this hand will be re-dealt.</p>",
     [
       { label: "Re-deal this hand", cls: "primary", cb: () => { clear(); startHand(); } },
       { label: "Main menu", cls: "secondary", cb: () => { clear(); gotoMenu(); } },
-    ]);
+    ], false);
 }
 
 /* Clear the local player's (or a guest's) open prompt UI without sending an
@@ -1050,7 +1053,7 @@ async function doWin(seat, winTile, selfDraw, discarder, special = {}) {
     ];
     if (!(typeof isPartyMode === "function" && isPartyMode()) && G.myDiscardLog && G.myDiscardLog.length) {
       // "Back" returns to THIS same modal (plain showModal — no replayed win ceremony)
-      actions.push({ label: "📜 Recap", cls: "secondary", cb: () => showHandRecap(() => showModal(endHtml, actions)) });
+      actions.push({ label: "📜 Recap", cls: "secondary", cb: () => showHandRecap(() => showModal(endHtml, actions, false)) });
     }
     showEndModal(endHtml, actions);
     if (typeof fxWinModalConfetti === "function") fxWinModalConfetti(s.control === "local", threeGold || !!special.qiangJin);
@@ -1076,9 +1079,9 @@ function drawGame() {
   const drawHtml = endModalHtml({ kind: "draw" });
   const drawActions = [{ label: "Next hand", cls: "primary", cb: () => { hideModal(); nextHand(null); } }];
   if (!(typeof isPartyMode === "function" && isPartyMode()) && G.myDiscardLog && G.myDiscardLog.length) {
-    drawActions.push({ label: "📜 Recap", cls: "secondary", cb: () => showHandRecap(() => showModal(drawHtml, drawActions)) });
+    drawActions.push({ label: "📜 Recap", cls: "secondary", cb: () => showHandRecap(() => showModal(drawHtml, drawActions, false)) });
   }
-  showModal(drawHtml, drawActions);
+  showModal(drawHtml, drawActions, false);   // the only way to reach Next hand
   if (typeof netBroadcastEndModal === "function") {
     netBroadcastEndModal(() => ({ kind: "draw" }));
   }
@@ -1246,7 +1249,9 @@ window.addEventListener("DOMContentLoaded", () => {
       wasNarrow = narrow;
     });
   }
-  $("#modal-overlay").addEventListener("click", e => { if (e.target.id === "modal-overlay") hideModal(); });
+  $("#modal-overlay").addEventListener("click", e => {
+    if (e.target.id === "modal-overlay" && !e.target.classList.contains("modal-locked")) hideModal();
+  });
 
   // main menu buttons
   const mr = $("#menu-resume");
