@@ -682,7 +682,6 @@ body.paws-collapsed #log { margin-right: 66px; }
 #modal h2 { margin-top: 0; }
 #modal-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .lesson-head { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.55; }
-.quiz { background: #eef3e6; border-radius: 12px; padding: 12px 14px; margin-top: 14px; }
 .quiz-options { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
 .quiz-right { color: var(--good); font-weight: 600; }
 .quiz-wrong { color: var(--bad); font-weight: 600; }

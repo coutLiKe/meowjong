@@ -10,6 +10,7 @@ require("./shanten.test");
 require("./net.test");
 require("./emotes.test");
 require("./save.test");
+require("./hand-history.test");
 require("./fairness.test");
 require("./scene3d.test");
 

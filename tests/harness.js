@@ -16,7 +16,7 @@ const vm = require("vm");
 
 const ROOT = path.join(__dirname, "..");
 // Order matters (same as index.html) — later files reference earlier globals.
-const FILES = ["js/tiles.js", "js/engine.js", "js/ai.js", "js/net.js", "js/emotes.js", "js/scene3d.js", "js/main.js"];
+const FILES = ["js/tiles.js", "js/engine.js", "js/ai.js", "js/net.js", "js/emotes.js", "js/scene3d.js", "js/main.js", "js/hand-history.js"];
 
 /* Names we surface for tests (missing ones resolve to undefined, not a crash). */
 const EXPORTS = [
@@ -30,6 +30,8 @@ const EXPORTS = [
   "escapeHtml", "sanitizeName", "sanitizeMarkup", "normalizePartyCode", "peerId", "partyPeerOptions", "PARTY_TURN_SERVERS", "isPartyMode", "projectFor",
   "isSoloMatch", "saveMatch", "loadMatch", "clearSave", "storeGet", "storeSet",
   "MATCH_HANDS", "SAVE_VERSION",
+  "handHistoryLoad", "handHistorySave", "handHistoryRecord",
+  "HAND_HISTORY_KEY", "HAND_HISTORY_VERSION", "HAND_HISTORY_CAP",
   "EMOTES", "EMOTE_ART", "EMOTE_LOADOUT", "EMOTE_RATE", "EMOTE_EVENTS",
   "emoteFaceSVG", "emoteRateOk",
   "scene3dProjection",

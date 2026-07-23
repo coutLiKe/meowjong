@@ -160,24 +160,34 @@ function showStandings() {
   if (typeof achRecordMatchEnd === "function") achRecordMatchEnd(data.ranked[0] && data.ranked[0].seat === 0);
 }
 
-/* ---------- Hand recap (Pillar 3 / G6, scoped to solo: current hand only) ----------
-   A free lesson after the fact: your own discards this hand, with the exact
+/* ---------- Hand recap (Pillar 3 / G6, extended with a cross-session archive) ----------
+   A free lesson after the fact: your own discards a hand, with the exact
    shanten (steps-from-ready) transition each one caused — the same metric the
-   coach uses live, just replayed. */
-function showHandRecap(onClose) {
-  const back = onClose || hideModal;   // return to the end-of-hand modal, not close it entirely
-  const entries = G.myDiscardLog || [];
+   coach uses live, just replayed. Browses js/hand-history.js's capped archive;
+   index defaults to the just-finished hand (its newest entry). Solo only. */
+function showHandRecap(onClose, index) {
+  const back = onClose || hideModal;   // "Back" always returns to the true origin modal
+  const hands = typeof handHistoryLoad === "function" ? handHistoryLoad() : [];
+  const idx = index === undefined ? hands.length - 1 : index;
+  const entry = hands[idx];
+  const entries = (entry && entry.discardTrace) || [];
+  const actions = [];
+  if (idx > 0) actions.push({ label: "← Older", cls: "secondary", cb: () => showHandRecap(onClose, idx - 1) });
+  if (idx >= 0 && idx < hands.length - 1) actions.push({ label: "Newer →", cls: "secondary", cb: () => showHandRecap(onClose, idx + 1) });
+  actions.push({ label: "Back", cls: "primary", cb: back });
+  const label = hands.length > 1 && entry
+    ? `<p class="log-dim">Hand ${idx + 1} of ${hands.length} · ${new Date(entry.date).toLocaleDateString()}</p>` : "";
   if (!entries.length) {
-    showModal(`<h2>📜 Hand recap</h2><p>You didn't get a discard in this hand (instant win, or the hand ended before your turn).</p>`,
-      [{ label: "Back", cls: "primary", cb: back }], false);
+    showModal(`<h2>📜 Hand recap</h2>${label}<p>${entry ? "You didn't get a discard in this hand (instant win, or the hand ended before your turn)." : "No hand history yet."}</p>`,
+      actions, false);
     return;
   }
   const rows = entries.map((e, i) => {
     const trend = e.after < e.before ? "✅ closer to ready" : e.after > e.before ? "⚠️ further from ready" : "↔️ unchanged";
     return `<li>Turn ${i + 1}: discarded <b>${tileShort(e.kind)}</b> — ${e.before} → ${e.after} step${e.after === 1 ? "" : "s"} from ready <span class="log-dim">(${trend})</span></li>`;
   }).join("");
-  showModal(`<h2>📜 Hand recap</h2><p>Your discards this hand, and how each changed your distance to ready:</p><ol class="standings">${rows}</ol>`,
-    [{ label: "Back", cls: "primary", cb: back }], false);
+  showModal(`<h2>📜 Hand recap</h2>${label}<p>Your discards this hand, and how each changed your distance to ready:</p><ol class="standings">${rows}</ol>`,
+    actions, false);
 }
 
 /* ---------- Fatal-error recovery ---------- */
@@ -1031,6 +1041,17 @@ async function doWin(seat, winTile, selfDraw, discarder, special = {}) {
       dealtIn: seat !== 0 && discarder === 0,
     });
   }
+  if (!(typeof isPartyMode === "function" && isPartyMode()) && typeof handHistoryRecord === "function") {
+    handHistoryRecord({
+      youWon: seat === 0,
+      selfDraw: seat === 0 && selfDraw,
+      instantWin: seat === 0 && (threeGold || !!special.qiangJin),
+      flowers: seat === 0 ? s.flowers.length : 0,
+      points: seat === 0 ? score.total : 0,
+      dealtIn: seat !== 0 && discarder === 0,
+      handKinds: seat === 0 ? handKinds : [],
+    });
+  }
   if (typeof achRecordHandEnd === "function") {
     achRecordHandEnd({
       youWon: seat === 0,
@@ -1051,7 +1072,7 @@ async function doWin(seat, winTile, selfDraw, discarder, special = {}) {
       { label: "Next hand", cls: "primary", cb: () => { hideModal(); nextHand(seat); } },
       { label: "New match", cls: "secondary", cb: () => { hideModal(); newMatch(); } },
     ];
-    if (!(typeof isPartyMode === "function" && isPartyMode()) && G.myDiscardLog && G.myDiscardLog.length) {
+    if (!(typeof isPartyMode === "function" && isPartyMode()) && typeof handHistoryLoad === "function" && handHistoryLoad().length) {
       // "Back" returns to THIS same modal (plain showModal — no replayed win ceremony)
       actions.push({ label: "📜 Recap", cls: "secondary", cb: () => showHandRecap(() => showModal(endHtml, actions, false)) });
     }
@@ -1075,10 +1096,11 @@ function drawGame() {
   if (typeof scene3dWinReaction === "function") scene3dWinReaction();
   if (typeof emoteCatReact === "function") emoteCatReact(1 + Math.floor(Math.random() * 3), "draw");
   if (typeof statsRecordHandEnd === "function") statsRecordHandEnd({});
+  if (!(typeof isPartyMode === "function" && isPartyMode()) && typeof handHistoryRecord === "function") handHistoryRecord({});
   if (typeof achRecordHandEnd === "function") achRecordHandEnd({});   // a draw — no win, no loss, streak untouched
   const drawHtml = endModalHtml({ kind: "draw" });
   const drawActions = [{ label: "Next hand", cls: "primary", cb: () => { hideModal(); nextHand(null); } }];
-  if (!(typeof isPartyMode === "function" && isPartyMode()) && G.myDiscardLog && G.myDiscardLog.length) {
+  if (!(typeof isPartyMode === "function" && isPartyMode()) && typeof handHistoryLoad === "function" && handHistoryLoad().length) {
     drawActions.push({ label: "📜 Recap", cls: "secondary", cb: () => showHandRecap(() => showModal(drawHtml, drawActions, false)) });
   }
   showModal(drawHtml, drawActions, false);   // the only way to reach Next hand

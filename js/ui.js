@@ -434,6 +434,30 @@ function log(msg, cls = "", localOnly = false) {
 
 /* ---------- Modal ---------- */
 
+/* Focusable elements currently inside the modal, in DOM order — recomputed on
+   every keypress since #modal-content is rebuilt via innerHTML on each open. */
+function _modalFocusables() {
+  const nodes = $("#modal").querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  );
+  return Array.from(nodes).filter(el => !el.disabled && el.offsetParent !== null);
+}
+let _modalReturnFocus = null;
+function _modalKeydown(e) {
+  if (e.key === "Escape") {
+    // Same guard the background-click handler uses: a must-act modal (locked)
+    // can't be dismissed by Escape either, only by its own buttons.
+    if (!$("#modal-overlay").classList.contains("modal-locked")) { e.preventDefault(); hideModal(); }
+    return;
+  }
+  if (e.key !== "Tab") return;
+  const f = _modalFocusables();
+  if (!f.length) { e.preventDefault(); return; }
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
 function showModal(html, buttons = [], dismissible = true) {
   if (typeof emoteWheelClose === "function") emoteWheelClose();
   $("#modal-content").innerHTML = html;
@@ -453,8 +477,19 @@ function showModal(html, buttons = [], dismissible = true) {
   // stray click can't strand the player with no visible way to continue.
   overlay.classList.toggle("modal-locked", !dismissible);
   overlay.classList.remove("hidden");
+  const modal = $("#modal");
+  _modalReturnFocus = document.activeElement;
+  modal.addEventListener("keydown", _modalKeydown);
+  const focusables = _modalFocusables();
+  (focusables[0] || modal).focus();
 }
-function hideModal() { $("#modal-overlay").classList.add("hidden"); }
+function hideModal() {
+  const overlay = $("#modal-overlay");
+  overlay.classList.add("hidden");
+  $("#modal").removeEventListener("keydown", _modalKeydown);
+  if (_modalReturnFocus && typeof _modalReturnFocus.focus === "function") _modalReturnFocus.focus();
+  _modalReturnFocus = null;
+}
 
 /* ---------- End-of-hand modal (shared safe renderer: host & guest) ----------
    Built from STRUCTURED DATA only — no raw HTML passthrough — so a party guest
